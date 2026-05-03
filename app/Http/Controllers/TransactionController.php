@@ -80,7 +80,7 @@ class TransactionController extends Controller
                 'item_name' => $validated['item_name'],
                 'qty' => $inventory['quantity'] ?? 1,
                 'unit' => $inventory['unit'] ?? 'pcs',
-                'cogs' => $inventory['cogs'] ?? ($validated['amount'] / ($inventory['quantity'] ?? 1)),
+                'cogs' => round($inventory['cogs'] ?? ($validated['amount'] / ($inventory['quantity'] ?? 1)), 2),
                 'expiry_date' => now()->addDays($inventory['expiry_days'] ?? 7),
             ]);
         }

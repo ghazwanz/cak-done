@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('item_name'); // cth: "Sosis Kanzler"
             $table->integer('qty'); // Jumlah sisa stok
             $table->string('unit')->default('pcs'); // pcs, kg, liter
-            $table->bigInteger('cogs')->nullable(); // Harga Pokok Penjualan (HPP) - untuk rekomendasi diskon AI
+            $table->decimal('cogs', 15, 2)->nullable(); // Harga Pokok Penjualan (HPP) - untuk rekomendasi diskon AI
 
             // Tanggal kadaluarsa untuk trigger alert "Besok Basi!"
             $table->date('expiry_date')->nullable();

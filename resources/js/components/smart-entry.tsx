@@ -108,13 +108,13 @@ export function SmartEntry() {
                     <Sparkles className="h-6 w-6 text-white group-hover:animate-pulse" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] border-none shadow-2xl bg-white/95 backdrop-blur-md">
+            <DialogContent className="sm:max-w-[500px] border-none shadow-2xl bg-white dark:bg-slate-900/95 backdrop-blur-md">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                        <Sparkles className="h-6 w-6 text-indigo-600" />
+                    <DialogTitle className="flex items-center gap-2 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                        <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                         Catat Pintar
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="dark:text-slate-400">
                         Ketik, ucapkan, atau foto struk belanja Anda. AI akan mencatatnya secara otomatis.
                     </DialogDescription>
                 </DialogHeader>
@@ -126,11 +126,11 @@ export function SmartEntry() {
                                 placeholder="Contoh: 'Beli bensin 50rb' atau 'Jual kopi 15rb'..."
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
-                                className="pr-10 h-12 text-lg border-gray-200 dark:text-gray-700 focus:ring-indigo-500 rounded-xl"
+                                className="pr-10 h-12 text-lg border-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 focus:ring-indigo-500 rounded-xl"
                                 onKeyDown={(e) => e.key === 'Enter' && handleParse()}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-indigo-600">
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400">
                                     <Mic className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -139,7 +139,7 @@ export function SmartEntry() {
                         <div className="flex gap-2">
                             <Button
                                 variant="outline"
-                                className="flex-1 h-12 rounded-xl border-dashed border-2 hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                                className="flex-1 h-12 rounded-xl border-dashed border-2 dark:border-slate-700 dark:text-slate-300 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
                             >
                                 <ImageIcon className="mr-2 h-4 w-4" />
                                 Foto Struk
@@ -149,7 +149,7 @@ export function SmartEntry() {
                         <Button
                             onClick={handleParse}
                             disabled={parsing || !inputText.trim()}
-                            className="w-full h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg shadow-indigo-200"
+                            className="w-full h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-semibold shadow-lg shadow-indigo-200 dark:shadow-none"
                         >
                             {parsing ? (
                                 <>
@@ -168,41 +168,57 @@ export function SmartEntry() {
                     <form onSubmit={handleSubmit} className="space-y-6 py-4 animate-in fade-in zoom-in duration-300">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2 col-span-2">
-                                <Label htmlFor="item_name" className="text-sm font-medium text-gray-700">Nama Barang/Kegiatan</Label>
+                                <Label htmlFor="item_name" className="text-sm font-medium text-gray-700 dark:text-slate-300">Nama Barang/Kegiatan</Label>
                                 <Input
                                     id="item_name"
                                     value={data.item_name}
                                     onChange={(e) => setData('item_name', e.target.value)}
-                                    className="h-11 rounded-lg"
+                                    className="h-11 rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="amount" className="text-sm font-medium text-gray-700">Jumlah (Rp)</Label>
+                                <Label htmlFor="amount" className="text-sm font-medium text-gray-700 dark:text-slate-300">Jumlah (Rp)</Label>
                                 <Input
                                     id="amount"
                                     type="number"
                                     value={data.amount}
                                     onChange={(e) => setData('amount', parseInt(e.target.value) || 0)}
-                                    className="h-11 rounded-lg"
+                                    className="h-11 rounded-lg dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="category" className="text-sm font-medium text-gray-700">Kategori</Label>
-                                <Input
+                                <Label htmlFor="category" className="text-sm font-medium text-gray-700 dark:text-slate-300">Kategori</Label>
+                                <select
                                     id="category"
                                     value={data.category}
                                     onChange={(e) => setData('category', e.target.value)}
-                                    className="h-11 rounded-lg"
-                                />
+                                    className="flex h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:ring-offset-slate-950"
+                                >
+                                    <option value="">Pilih Kategori</option>
+                                    <optgroup label="Pemasukan">
+                                        <option value="penjualan">Penjualan</option>
+                                        <option value="modal">Modal/Investasi</option>
+                                        <option value="piutang">Pelunasan Piutang</option>
+                                    </optgroup>
+                                    <optgroup label="Pengeluaran">
+                                        <option value="bahan_baku">Bahan Baku</option>
+                                        <option value="operasional">Operasional (Listrik/Air/Sewa)</option>
+                                        <option value="gaji">Gaji Pegawai</option>
+                                        <option value="pemasaran">Pemasaran/Iklan</option>
+                                        <option value="alat_usaha">Peralatan/Aset</option>
+                                        <option value="pribadi">Pribadi/Prive</option>
+                                    </optgroup>
+                                    <option value="lainnya">Lain-lain</option>
+                                </select>
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-slate-700">
                             <div className="flex flex-col">
-                                <span className="text-sm font-semibold text-gray-900 capitalize">
+                                <span className="text-sm font-semibold text-gray-900 dark:text-slate-100 capitalize">
                                     {data.type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}
                                 </span>
-                                <span className="text-xs text-gray-500">Tipe Transaksi</span>
+                                <span className="text-xs text-gray-500 dark:text-slate-400">Tipe Transaksi</span>
                             </div>
                             <div className="flex gap-2">
                                 <Button
@@ -219,7 +235,7 @@ export function SmartEntry() {
                                     variant={!data.is_business ? 'default' : 'outline'}
                                     size="sm"
                                     onClick={() => setData('is_business', false)}
-                                    className="rounded-full"
+                                    className="rounded-full dark:border-slate-700"
                                 >
                                     Pribadi
                                 </Button>
@@ -227,28 +243,28 @@ export function SmartEntry() {
                         </div>
 
                         {data.type === 'expense' && (
-                            <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 space-y-3">
-                                <h4 className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Detail Inventaris (Otomatis)</h4>
+                            <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/30 space-y-3">
+                                <h4 className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Detail Inventaris (Otomatis)</h4>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1">
-                                        <Label className="text-[10px] text-indigo-500">Kuantitas</Label>
+                                        <Label className="text-[10px] text-indigo-500 dark:text-indigo-400">Kuantitas</Label>
                                         <div className="flex items-center gap-2">
                                             <Input 
                                                 type="number" 
                                                 value={data.inventory?.quantity || 0} 
                                                 onChange={(e) => setData('inventory', { ...data.inventory, quantity: parseInt(e.target.value) || 0 })}
-                                                className="h-8 text-xs"
+                                                className="h-8 text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                                             />
-                                            <span className="text-xs text-indigo-700 font-medium">{data.inventory?.unit || 'pcs'}</span>
+                                            <span className="text-xs text-indigo-700 dark:text-indigo-300 font-medium">{data.inventory?.unit || 'pcs'}</span>
                                         </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-[10px] text-indigo-500">Estimasi Kadaluarsa (Hari)</Label>
+                                        <Label className="text-[10px] text-indigo-500 dark:text-indigo-400">Estimasi Kadaluarsa (Hari)</Label>
                                         <Input 
                                             type="number" 
                                             value={data.inventory?.expiry_days || 0} 
                                             onChange={(e) => setData('inventory', { ...data.inventory, expiry_days: parseInt(e.target.value) || 0 })}
-                                            className="h-8 text-xs"
+                                            className="h-8 text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                                         />
                                     </div>
                                 </div>
@@ -260,7 +276,7 @@ export function SmartEntry() {
                                 type="button"
                                 variant="ghost"
                                 onClick={() => setParsedData(null)}
-                                className="rounded-xl"
+                                className="rounded-xl dark:text-slate-400 dark:hover:bg-slate-800"
                             >
                                 <X className="mr-2 h-4 w-4" />
                                 Batal
@@ -268,7 +284,7 @@ export function SmartEntry() {
                             <Button
                                 type="submit"
                                 disabled={processing}
-                                className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-8 shadow-lg shadow-green-100"
+                                className="bg-green-600 hover:bg-green-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white rounded-xl px-8 shadow-lg shadow-green-100 dark:shadow-none"
                             >
                                 {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                                 Simpan Transaksi

@@ -14,6 +14,11 @@ This document outlines the strict best practices and backend conventions for the
 - **AI Context**: The AI Agent should only receive final, calculated aggregation results (e.g., "Total sales today: Rp 500,000") as context.
 - **Reasoning**: AI's primary role is Reasoning (narrative, advice, interpretation), while the Backend's role is Calculation (accuracy, efficiency).
 
+### 1.2 Dark Mode Mandate
+- **Components**: All new or modified UI components must fully support Dark Mode using Tailwind CSS `dark:` utilities.
+- **Variables**: Use existing CSS variables or HSL tokens whenever possible.
+- **Accessibility**: Ensure text contrast remains readable in dark mode (minimum `slate-400` or `slate-300` for secondary text).
+
 ## 2. Laravel Conventions
 - Use `php artisan make:` commands to create new files (migrations, controllers, models, etc.). Always pass `--no-interaction` and applicable `--options` to ensure correct behavior.
 - If creating a generic PHP class, use `php artisan make:class`.
