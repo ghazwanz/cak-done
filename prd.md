@@ -467,9 +467,15 @@ Indonesia's UMKM sector contributes Rp 9,580 trillion to GDP and absorbs 97% of 
 │   PostgreSQL DB     │  │   Vertex AI (Gemini 2.5F)  │
 │  (GCP Cloud SQL)    │  │   - Voice STT              │
 │  - Transactions     │  │   - Receipt OCR            │
-│  - Inventory Batches│  │   - Agentic Cash Flow      │
-│  - User Profiles    │  │   - Insight Generation     │
+│  - Inventory Batches│  │   - Reasoning & Insights   │
+│  - User Profiles    │  │   - Natural Language UI    │
 └─────────────────────┘  └────────────────────────────┘
+
+### 7.4 Predictive Analytics Strategy (SQL-First, AI-Second)
+To ensure 100% mathematical accuracy and high performance (< 2s response), the system follows a split-logic strategy:
+- **Backend Calculation (PHP/PostgreSQL)**: The Predictive Cash Flow Agent uses hard-coded mathematical formulas (Linear Regression, Moving Averages) to calculate future balances and trends.
+- **AI Reasoning (Gemini)**: The AI Agent receives the *results* of these calculations and generates a human-friendly narrative, reasoning, and actionable suggestions.
+- **Token Efficiency**: This prevents "token bloating" by avoiding sending raw transaction history to the AI, focusing instead on processed summary metrics.
 ```
 
 ### 7.3 Data Flow — Transaction via Voice

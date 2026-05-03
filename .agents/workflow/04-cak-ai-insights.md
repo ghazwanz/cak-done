@@ -22,6 +22,12 @@
 - Utilize Laravel's scheduled task runner to process and dispatch the daily morning briefings at the configured user time.
 - Write Pest tests for the scheduled command, ensuring it only dispatches to opted-in users.
 
+#### 2.1 Data Preparation (SQL-First)
+- Before calling the Gemini API, perform a 'Data Preparation' stage.
+- **Instruction**: Execute summary SQL queries (e.g., total income for the last 7 days, top 3 items sold) via Eloquent.
+- **Payload**: Send the summary string/object to Gemini, **never** the entire raw transaction history.
+- **Storage**: Store periodic aggregation results in the `ai_insights` table for consistent and fast AI access.
+
 ### 3. Frontend & UI (Inertia + React + Shadcn UI)
 - Build the "Cak AI" chat interface. Make it feel seamless and distinct from traditional forms. Use **Shadcn UI** (ScrollArea, Avatar, Input, Button) via the **shadcn MCP server**.
 - Use optimistic UI updates for the chat bubbles, showing a typing indicator while the Laravel backend streams or resolves the AI response.

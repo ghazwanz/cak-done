@@ -100,4 +100,34 @@ class Team extends Model
     {
         return 'slug';
     }
+
+    /**
+     * Get all transactions for this team.
+     *
+     * @return HasMany<Transaction, $this>
+     */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * Get all inventory batches for this team.
+     *
+     * @return HasMany<InventoryBatch, $this>
+     */
+    public function inventoryBatches(): HasMany
+    {
+        return $this->hasMany(InventoryBatch::class);
+    }
+
+    /**
+     * Get all AI insights for this team.
+     *
+     * @return HasMany<AiInsight, $this>
+     */
+    public function aiInsights(): HasMany
+    {
+        return $this->hasMany(AiInsight::class);
+    }
 }

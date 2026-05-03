@@ -22,9 +22,14 @@
 
 ### 2. Backend & AI Integration (Laravel)
 - Create a specific controller: `php artisan make:controller TransactionController`.
+- **Implement AI Driver Architecture**: 
+    - Use `App\Contracts\AiProvider` interface to decouple the business logic from specific AI providers.
+    - Implement `VertexAiProvider` (GCP) and `GeminiApiProvider` (AI Studio) to support two modes of integration.
+    - Configure using `config/ai.php` and `AI_PROVIDER` environment variable.
 - Leverage Laravel queues to process the audio/image payloads asynchronously to prevent UI blocking.
-- Construct the Vertex AI prompt securely on the backend.
-- Write Pest tests for the payload parser and API endpoints: `php artisan make:test --pest TransactionControllerTest`.
+- Construct the system prompts securely on the backend within the provider classes.
+- Write Pest tests for the AI service layer and API endpoints: `php artisan make:test --pest TransactionControllerTest`.
+- Ensure the controller uses the `AiProvider` interface via dependency injection.
 
 ### 3. Frontend & UI (Inertia + React + Shadcn UI)
 - Activate the `inertia-react-development` skill/mental-model.
