@@ -2,8 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\InventoryBatch;
+use App\Models\Team;
+use App\Models\Transaction;
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -13,11 +15,29 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // 1. Buat User Pemilik (Pak Budi)
+        $owner = User::factory()->create([
+            'name' => 'Pak Budi',
+            'email' => 'budi@cakdone.com',
+            'password' => bcrypt('12345'),
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // 2. Buat UMKM (Team)
+        $team = Team::forceCreate([
+            'name' => 'Warung SWK Pak Budi',
+            'is_personal' => true,
+        ]);
+
+        $team->members()->attach($owner->id, ['role' => 'owner']);
+
+        // 3. Generate 50 Transaksi & 10 Stok untuk UMKM Pak Budi
+        Transaction::factory(50)->create([
+            'team_id' => $team->id,
+            'user_id' => $owner->id,
+        ]);
+
+        InventoryBatch::factory(10)->create([
+            'team_id' => $team->id,
         ]);
     }
 }
