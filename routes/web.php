@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\Teams\TeamInvitationController;
@@ -17,8 +18,8 @@ Route::prefix('{current_team}')
     ->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
 
-        // Transactions (Workflow 1)
-        Route::post('transactions/parse', [TransactionController::class, 'parse'])->name('transactions.parse');
+        // Transactions (Workflow 1 & 2 Integration)
+        Route::post('ai/process', [AiController::class, 'process'])->name('ai.process');
         Route::post('transactions', [TransactionController::class, 'store'])->name('transactions.store');
 
         // Inventory (Workflow 2)

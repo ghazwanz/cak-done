@@ -60,10 +60,31 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Be concise in your explanations - focus on what's important rather than explaining obvious details.
 
-## Token Efficiency
+## Token Efficiency & Smart AI Architecture
 
 - Minimize token usage by following the guidelines in [.agents/rules/00-token-efficiency.md](.agents/rules/00-token-efficiency.md).
 - Read only necessary code sections, use specific search queries, and avoid redundant tool calls.
+
+### UI Distinction & Dual-Intent Architecture
+
+To separate functions cleanly, follow these AI interaction standards:
+
+1. **Global Smart Entry (Component)**
+   - **Location:** Universally accessible (`resources/js/components/smart-entry.tsx`).
+   - **Function:** **Write-Only**. Used exclusively for quick logging of transactions/inventory.
+   - **Capabilities:** MUST support **Live Voice Input** (real-time recording from the browser's microphone) and **Input img from device** for receipt OCR.
+   - **Routing:** Direct logic via `TransactionController@store` or similar logging routes.
+
+2. **Halaman CATAT / AI Insights (Sidebar Page)**
+   - **Location:** Dedicated dashboard menu page.
+   - **Function:** **Hybrid (Write & Read)** via the **Dual-Intent Engine**.
+   - **Intent `RECORD`**: If user inputs operational activity (e.g., "Jual bakso 5."). Routes to write DB logic.
+   - **Intent `QUERY`**: If user asks business questions (e.g., "Berapa profitku?"). Routes to SQL-First extraction via `app/Services/Ai/AggregatorService.php`.
+
+### Database & Aggregator Strategy
+
+- **Transactions Table**: Must retain the `is_business` flag and `raw_input` column to store original multimodal prompts and delineate business logic.
+- **SQL-First Summaries**: The AI must not calculate sums/averages line-by-line. Instead, `AggregatorService.php` must handle SQL DB functions (`SUM`, `AVG`, `COUNT`), returning clean aggregated arrays to the AI for narration.
 
 === boost rules ===
 
