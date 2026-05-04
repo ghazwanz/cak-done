@@ -8,6 +8,17 @@ This document outlines the strict best practices and backend conventions for the
 - **Wayfinder**: Use Laravel Wayfinder to generate TypeScript functions for Laravel routes. Import from `@/actions/` (controllers) or `@/routes/` (named routes).
 - **APIs**: For APIs, default to using Eloquent API Resources and API versioning, unless existing routes follow a different convention.
 
+### 1.1 Efficiency Rules (SQL-First, AI-Second)
+- **Aggregations**: Strictly prohibit pulling thousands of raw data rows into the AI prompt.
+- **Mandate**: Use Laravel Eloquent or Query Builder to perform aggregations (SUM, AVG, COUNT, etc.) at the PostgreSQL database level.
+- **AI Context**: The AI Agent should only receive final, calculated aggregation results (e.g., "Total sales today: Rp 500,000") as context.
+- **Reasoning**: AI's primary role is Reasoning (narrative, advice, interpretation), while the Backend's role is Calculation (accuracy, efficiency).
+
+### 1.2 Dark Mode Mandate
+- **Components**: All new or modified UI components must fully support Dark Mode using Tailwind CSS `dark:` utilities.
+- **Variables**: Use existing CSS variables or HSL tokens whenever possible.
+- **Accessibility**: Ensure text contrast remains readable in dark mode (minimum `slate-400` or `slate-300` for secondary text).
+
 ## 2. Laravel Conventions
 - Use `php artisan make:` commands to create new files (migrations, controllers, models, etc.). Always pass `--no-interaction` and applicable `--options` to ensure correct behavior.
 - If creating a generic PHP class, use `php artisan make:class`.

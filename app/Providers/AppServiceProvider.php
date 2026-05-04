@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\AiProvider;
+use App\Services\Ai\AiManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +17,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(AiManager::class, function ($app) {
+            return new AiManager($app);
+        });
+
+        $this->app->bind(AiProvider::class, function ($app) {
+            return $app->make(AiManager::class)->driver();
+        });
     }
 
     /**

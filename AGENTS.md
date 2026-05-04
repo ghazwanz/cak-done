@@ -120,7 +120,9 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 # Test Enforcement
 
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
+- Every change must be programmatically tested.
+- **Dedicated Test Files**: Every new feature must have its own dedicated test file (e.g., `tests/Feature/SomeFeatureTest.php`).
+- Write a new test or update an existing test, then run the affected tests to make sure they pass.
 - Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
 
 === inertia-laravel/core rules ===
@@ -203,5 +205,7 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 # Inertia + React
 
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
+- **Dark Mode Support**: All new or modified UI components MUST fully support Dark Mode using Tailwind CSS `dark:` utilities. Ensure high contrast and readability in dark themes.
+- **Aesthetic Premium**: Always prioritize a premium look (gradients, smooth transitions, modern typography) as defined in the project vision.
 
 </laravel-boost-guidelines>

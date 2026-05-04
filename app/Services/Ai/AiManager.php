@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Services\Ai;
+
+use Illuminate\Support\Manager;
+
+class AiManager extends Manager
+{
+    /**
+     * Get the default driver name.
+     */
+    public function getDefaultDriver(): string
+    {
+        return $this->config->get('ai.default', 'gemini');
+    }
+
+    /**
+     * Create the Gemini driver instance.
+     */
+    protected function createGeminiDriver(): GeminiApiProvider
+    {
+        $config = $this->config->get('ai.providers.gemini');
+
+        return new GeminiApiProvider(
+            apiKey: $config['api_key'],
+            model: $config['model']
+        );
+    }
+
+    /**
+     * Create the Vertex driver instance.
+     */
+    protected function createVertexDriver(): VertexAiProvider
+    {
+        $config = $this->config->get('ai.providers.vertex');
+
+        return new VertexAiProvider(
+            projectId: $config['project_id'],
+            location: $config['location'],
+            model: $config['model'],
+            apiEndpoint: $config['api_endpoint']
+        );
+    }
+}
