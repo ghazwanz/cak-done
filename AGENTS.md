@@ -60,6 +60,11 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Be concise in your explanations - focus on what's important rather than explaining obvious details.
 
+## Token Efficiency
+
+- Minimize token usage by following the guidelines in [.agents/rules/00-token-efficiency.md](.agents/rules/00-token-efficiency.md).
+- Read only necessary code sections, use specific search queries, and avoid redundant tool calls.
+
 === boost rules ===
 
 # Laravel Boost

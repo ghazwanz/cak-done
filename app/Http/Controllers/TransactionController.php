@@ -7,7 +7,6 @@ use App\Models\Team;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
 class TransactionController extends Controller
 {
@@ -45,7 +44,7 @@ class TransactionController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Failed to parse transaction: ' . $e->getMessage()
+                'error' => 'Failed to parse transaction: '.$e->getMessage(),
             ], 422);
         }
     }
@@ -76,7 +75,19 @@ class TransactionController extends Controller
 
         if ($request->has('inventory') && $validated['type'] === 'expense') {
             $inventory = $request->input('inventory');
+
+            // 1. Find or create the InventoryItem for this team
+            $inventoryItem = $current_team->inventoryItems()->firstOrCreate(
+                ['name' => $validated['item_name']],
+                [
+                    'unit' => $inventory['unit'] ?? 'pcs',
+                    'category' => $validated['category'],
+                ]
+            );
+
+            // 2. Create the specific batch
             $current_team->inventoryBatches()->create([
+                'inventory_item_id' => $inventoryItem->id,
                 'item_name' => $validated['item_name'],
                 'qty' => $inventory['quantity'] ?? 1,
                 'unit' => $inventory['unit'] ?? 'pcs',

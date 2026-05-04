@@ -15,13 +15,6 @@ interface Props {
 }
 
 export default function Dashboard({ auth }: Props) {
-    const [catatInput, setCatatInput] = useState('');
-
-    const handleCatatSubmit = (e: FormEvent) => {
-        e.preventDefault();
-        alert(`Memproses instruksi ke Gemini AI: "${catatInput}"`);
-        setCatatInput('');
-    };
     return (
         <>
             <Head title="Dashboard Utama - Cak DONE" />

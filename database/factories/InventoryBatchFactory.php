@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Team;
+use App\Models\InventoryItem;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InventoryBatchFactory extends Factory
@@ -11,6 +12,7 @@ class InventoryBatchFactory extends Factory
     {
         return [
             'team_id' => Team::factory(),
+            'inventory_item_id' => InventoryItem::factory(),
             'item_name' => $this->faker->randomElement(['Sosis Sapi', 'Ayam Frozen', 'Beras', 'Minyak Goreng']),
             'qty' => $this->faker->numberBetween(1, 50),
             'unit' => $this->faker->randomElement(['pcs', 'kg']),

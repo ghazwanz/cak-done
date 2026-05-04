@@ -112,6 +112,16 @@ class Team extends Model
     }
 
     /**
+     * Get all inventory items for this team.
+     *
+     * @return HasMany<InventoryItem, $this>
+     */
+    public function inventoryItems(): HasMany
+    {
+        return $this->hasMany(InventoryItem::class);
+    }
+
+    /**
      * Get all inventory batches for this team.
      *
      * @return HasMany<InventoryBatch, $this>
