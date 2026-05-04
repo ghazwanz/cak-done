@@ -12,10 +12,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('team_id')->constrained()->cascadeOnDelete();
 
-            $table->string('item_name'); // cth: "Sosis Kanzler"
+            $table->foreignId('inventory_item_id')->constrained()->cascadeOnDelete();
+            $table->string('item_name')->nullable(); // cth: "Sosis Kanzler" (redundant but useful for cache)
             $table->integer('qty'); // Jumlah sisa stok
             $table->string('unit')->default('pcs'); // pcs, kg, liter
-            $table->decimal('cogs', 15, 2)->nullable(); // Harga Pokok Penjualan (HPP) - untuk rekomendasi diskon AI
+            $table->decimal('cogs', 15, 2)->nullable(); // Harga Pokok Penjualan (HPP)
 
             // Tanggal kadaluarsa untuk trigger alert "Besok Basi!"
             $table->date('expiry_date')->nullable();

@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use Database\Factories\InventoryBatchFactory;
+use Database\Factories\InventoryItemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class InventoryBatch extends Model
+class InventoryItem extends Model
 {
-    /** @use HasFactory<InventoryBatchFactory> */
+    /** @use HasFactory<InventoryItemFactory> */
     use HasFactory;
 
     protected $guarded = [];
@@ -18,8 +18,8 @@ class InventoryBatch extends Model
         return $this->belongsTo(Team::class);
     }
 
-    public function inventoryItem()
+    public function batches()
     {
-        return $this->belongsTo(InventoryItem::class);
+        return $this->hasMany(InventoryBatch::class);
     }
 }

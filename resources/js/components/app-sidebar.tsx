@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { BookOpen, FolderGit2, LayoutGrid, Package } from 'lucide-react';
 import { SidebarAppearanceToggle } from '@/components/sidebar-appearance-toggle';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -16,19 +16,25 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import * as inventory from '@/routes/inventory';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
     const page = usePage();
-    const dashboardUrl = page.props.currentTeam
-        ? dashboard(page.props.currentTeam.slug)
-        : '/';
+    const currentTeamSlug = page.props.currentTeam?.slug;
+    const dashboardUrl = currentTeamSlug ? dashboard(currentTeamSlug) : '/';
+    const inventoryUrl = currentTeamSlug ? inventory.index(currentTeamSlug) : '#';
 
     const mainNavItems: NavItem[] = [
         {
             title: 'Dashboard',
             href: dashboardUrl,
             icon: LayoutGrid,
+        },
+        {
+            title: 'Inventory',
+            href: inventoryUrl,
+            icon: Package,
         },
     ];
 
