@@ -5,7 +5,7 @@
 
 ## Acceptance Criteria Checklist
 - [ ] Implement a global "Catat" FAB/bar for immediate access.
-- [ ] Develop voice-to-text recording: User speaks a transaction (e.g., "Jual 5 porsi bakso harga 15 ribu").
+- [ ] Develop live voice-to-text recording: User speaks directly into the microphone (not file upload).
 - [ ] Develop image-to-text (OCR) recording: Capture a photo of a receipt (even if crumpled or low-light).
 - [ ] Integrate Vertex AI (Gemini 2.5 Flash) to parse amount, category, item name, and transaction type.
 - [ ] Automatically categorize transactions following a standard accounting chart.
@@ -34,9 +34,10 @@
 ### 3. Frontend & UI (Inertia + React + Shadcn UI)
 - Activate the `inertia-react-development` skill/mental-model.
 - **Use Shadcn UI components** for the interface (e.g., Modals, Forms, Buttons, Inputs). Use the **shadcn MCP server** tools to fetch the correct `npx shadcn@latest add` commands and example usage before building.
-- Build the "Catat" UI component in `resources/js/Pages/` or `resources/js/Components/`.
+- Build the "Catat" UI component as a **Global Smart Entry Component** in `resources/js/components/smart-entry.tsx`.
+- **UI Distinction (Write-Only):** This global component is strictly for rapid, instant logging of transactions/inventory (Intent RECORD). It should NOT provide conversational AI responses or financial insights.
 - Ensure the UI feels premium: use a custom HSL color palette, modern typography, and subtle micro-animations (e.g., pulsing mic icon while recording).
-- Utilize the `useHttp` hook or standard `router.post` for handling multipart form data (audio/image uploads).
+- Utilize the `useHttp` hook or standard `router.post` for handling multipart form data (audio/image uploads) via `TransactionController@store` or designated logging routes.
 - Implement an optimistic UI or loading skeleton while the AI processes the request.
 - Provide a smooth confirmation modal/screen that clearly shows the extracted fields.
 

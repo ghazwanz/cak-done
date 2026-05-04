@@ -24,3 +24,7 @@ To minimize token usage and improve agent performance, follow these rules strict
 ## 5. Memory Management
 - **Use Session Memory**: Keep track of in-progress states in `/memories/session/` to avoid re-calculating or re-searching information in long conversations.
 - **Prune Redundant Steps**: If a path isn't working, stop and re-evaluate early instead of exhaustively searching with expensive tools.
+
+## 6. AI Data & Analytics Standard
+- **Strict Aggregation**: AI MUST NOT read raw database records row-by-row to answer queries (e.g., calculating profits).
+- **Source of Truth**: Use `app/Services/Ai/AggregatorService.php` to fetch SQL-computed aggregates (SUM, AVG, COUNT) as the only context passed to AI for narration. This drastically cuts token costs and improves accuracy.

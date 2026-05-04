@@ -73,7 +73,7 @@ class TransactionController extends Controller
             'raw_input' => $validated['raw_input'],
         ]);
 
-        if ($request->has('inventory') && $validated['type'] === 'expense') {
+        if ($request->has('inventory') && $request->input('inventory') !== null && $validated['type'] === 'expense') {
             $inventory = $request->input('inventory');
 
             // 1. Find or create the InventoryItem for this team
@@ -88,6 +88,7 @@ class TransactionController extends Controller
             // 2. Create the specific batch
             $current_team->inventoryBatches()->create([
                 'inventory_item_id' => $inventoryItem->id,
+                'team_id' => $current_team->id, // Ensure team_id is set
                 'item_name' => $validated['item_name'],
                 'qty' => $inventory['quantity'] ?? 1,
                 'unit' => $inventory['unit'] ?? 'pcs',
