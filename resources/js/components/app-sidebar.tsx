@@ -1,10 +1,10 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Package } from 'lucide-react';
-import { SidebarAppearanceToggle } from '@/components/sidebar-appearance-toggle';
+import { BookOpen, FolderGit2, LayoutGrid, Package, ReceiptText } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import { SidebarAppearanceToggle } from '@/components/sidebar-appearance-toggle';
 import { TeamSwitcher } from '@/components/team-switcher';
 import {
     Sidebar,
@@ -16,20 +16,27 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import * as inventory from '@/routes/inventory';
+import * as transactions from '@/routes/transactions';
 import type { NavItem } from '@/types';
+import * as inventory from '@/routes/inventory';
 
 export function AppSidebar() {
     const page = usePage();
     const currentTeamSlug = page.props.currentTeam?.slug;
-    const dashboardUrl = currentTeamSlug ? dashboard(currentTeamSlug) : '/';
-    const inventoryUrl = currentTeamSlug ? inventory.index(currentTeamSlug) : '#';
+    const dashboardUrl = currentTeamSlug ? dashboard.url(currentTeamSlug) : '/';
+    const inventoryUrl = currentTeamSlug ? inventory.index.url(currentTeamSlug) : '#';
+    const transactionsUrl = currentTeamSlug ? transactions.index.url(currentTeamSlug) : '#';
 
     const mainNavItems: NavItem[] = [
         {
             title: 'Dashboard',
             href: dashboardUrl,
             icon: LayoutGrid,
+        },
+        {
+            title: 'Transaksi',
+            href: transactionsUrl,
+            icon: ReceiptText,
         },
         {
             title: 'Inventory',
@@ -75,9 +82,7 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <div className="px-2 py-4">
-                    <SidebarAppearanceToggle />
-                </div>
+                <SidebarAppearanceToggle />
                 
                 <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />

@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\InventoryItem;
+use App\Models\Team;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +19,7 @@ class InventoryItemFactory extends Factory
     public function definition(): array
     {
         return [
-            'team_id' => \App\Models\Team::factory(),
+            'team_id' => Team::factory(),
             'name' => $this->faker->word(),
             'category' => $this->faker->word(),
             'unit' => $this->faker->randomElement(['pcs', 'kg', 'liter']),

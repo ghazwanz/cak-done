@@ -5,14 +5,28 @@ namespace App\Http\Controllers;
 use App\Contracts\AiProvider;
 use App\Models\Team;
 use App\Models\Transaction;
+use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class TransactionController extends Controller
 {
     public function __construct(
-        protected AiProvider $ai
+        protected AiProvider $ai,
+        protected TransactionService $transactionService
     ) {}
+
+    /**
+     * Display a listing of transactions.
+     */
+    public function index(Request $request, Team $current_team): Response
+    {
+        return Inertia::render('transactions/index', [
+            'transactions' => $this->transactionService->getTransactionsOrderedByDate($current_team),
+        ]);
+    }
 
     /**
      * Parse the multimodal input using AI.
@@ -63,39 +77,12 @@ class TransactionController extends Controller
             'raw_input' => 'nullable|string',
         ]);
 
-        $transaction = $current_team->transactions()->create([
-            'user_id' => Auth::id(),
-            'item_name' => $validated['item_name'],
-            'amount' => $validated['amount'],
-            'type' => $validated['type'],
-            'category' => $validated['category'],
-            'is_business' => $validated['is_business'],
-            'raw_input' => $validated['raw_input'],
-        ]);
-
-        if ($request->has('inventory') && $request->input('inventory') !== null && $validated['type'] === 'expense') {
-            $inventory = $request->input('inventory');
-
-            // 1. Find or create the InventoryItem for this team
-            $inventoryItem = $current_team->inventoryItems()->firstOrCreate(
-                ['name' => $validated['item_name']],
-                [
-                    'unit' => $inventory['unit'] ?? 'pcs',
-                    'category' => $validated['category'],
-                ]
-            );
-
-            // 2. Create the specific batch
-            $current_team->inventoryBatches()->create([
-                'inventory_item_id' => $inventoryItem->id,
-                'team_id' => $current_team->id, // Ensure team_id is set
-                'item_name' => $validated['item_name'],
-                'qty' => $inventory['quantity'] ?? 1,
-                'unit' => $inventory['unit'] ?? 'pcs',
-                'cogs' => round($inventory['cogs'] ?? ($validated['amount'] / ($inventory['quantity'] ?? 1)), 2),
-                'expiry_date' => now()->addDays($inventory['expiry_days'] ?? 7),
-            ]);
-        }
+        $this->transactionService->createTransaction(
+            team: $current_team,
+            userId: Auth::id(),
+            validated: $validated,
+            inventory: $request->input('inventory')
+        );
 
         return redirect()->back()->with('success', 'Transaksi berhasil disimpan!');
     }

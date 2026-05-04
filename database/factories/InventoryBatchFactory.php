@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Team;
 use App\Models\InventoryItem;
+use App\Models\Team;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InventoryBatchFactory extends Factory

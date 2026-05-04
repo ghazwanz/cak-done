@@ -16,8 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Mic, Image as ImageIcon, Send, Loader2, Check, X, Square } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Simplified helper for routing to the unified AI process endpoint
-const aiProcessUrl = (team: any) => `/${team.slug}/ai/process`;
+import * as ai from '@/routes/ai';
+import * as transactions from '@/routes/transactions';
 
 interface ParsedData {
     item_name: string;
@@ -131,7 +131,7 @@ export function SmartEntry() {
         formData.append('intent_context', 'smart_entry');
 
         try {
-            const response = await fetch(aiProcessUrl(currentTeam), {
+            const response = await fetch(ai.process.url(currentTeam.slug), {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
@@ -165,7 +165,7 @@ export function SmartEntry() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(`/${currentTeam.slug}/transactions`, {
+        post(transactions.store.url(currentTeam.slug), {
             onSuccess: () => {
                 setOpen(false);
                 reset();
@@ -181,18 +181,18 @@ export function SmartEntry() {
             <DialogTrigger asChild>
                 <Button
                     size="lg"
-                    className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 border-none group"
+                    className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl glow-primary hover:scale-110 transition-all duration-300 bg-primary hover:bg-primary/90 border-none group"
                 >
                     <Sparkles className="h-6 w-6 text-white group-hover:animate-pulse" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] border-none shadow-2xl bg-white dark:bg-slate-900/95 backdrop-blur-md">
+            <DialogContent className="sm:max-w-[500px] border-none shadow-2xl bg-card glass">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-                        <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                    <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
+                        <Sparkles className="h-6 w-6 text-primary" />
                         Log Cepat (Write-Only)
                     </DialogTitle>
-                    <DialogDescription className="dark:text-slate-400 italic">
+                    <DialogDescription className="text-muted-foreground italic">
                         Input operasional instan. Untuk analisis data, silakan gunakan menu Dashboard.
                     </DialogDescription>
                 </DialogHeader>
@@ -200,7 +200,7 @@ export function SmartEntry() {
                 {!parsedData ? (
                     <div className="space-y-4 py-4">
                         {isRecording && (
-                            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl animate-in fade-in duration-300">
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 backdrop-blur-xl animate-in fade-in duration-300">
                                 <div className="text-center space-y-8 p-8 w-full max-w-md">
                                     <div className="relative mx-auto w-32 h-32">
                                         <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-25"></div>
@@ -212,19 +212,19 @@ export function SmartEntry() {
                                     <div className="space-y-2">
                                         <h2 className="text-3xl font-bold text-white tracking-tight">Mendengarkan...</h2>
                                         <p className="text-red-400 font-mono text-2xl">{formatTime(recordingTime)}</p>
-                                        <p className="text-slate-400 italic">"Jual bakso 5 porsi..."</p>
+                                        <p className="text-muted-foreground italic">"Jual bakso 5 porsi..."</p>
                                     </div>
 
                                     <Button
                                         size="lg"
                                         onClick={stopRecording}
-                                        className="w-full h-24 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 text-2xl font-black shadow-2xl transition-transform active:scale-95 group"
+                                        className="w-full h-24 rounded-2xl bg-card hover:bg-accent text-foreground text-2xl font-black shadow-2xl transition-transform active:scale-95 group"
                                     >
-                                        <Square className="mr-4 h-8 w-8 fill-slate-900 group-hover:scale-110 transition-transform" />
+                                        <Square className="mr-4 h-8 w-8 fill-foreground group-hover:scale-110 transition-transform" />
                                         SELESAI / STOP
                                     </Button>
                                     
-                                    <p className="text-slate-500 text-sm">Ketuk tombol besar untuk memproses suara Anda</p>
+                                    <p className="text-muted-foreground text-sm">Ketuk tombol besar untuk memproses suara Anda</p>
                                 </div>
                             </div>
                         )}
@@ -234,14 +234,14 @@ export function SmartEntry() {
                                 placeholder="Contoh: 'Beli bensin 50rb' atau 'Jual kopi 15rb'..."
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
-                                className="pr-10 h-12 text-lg border-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 focus:ring-indigo-500 rounded-xl"
+                                className="pr-10 h-12 text-lg rounded-xl"
                                 onKeyDown={(e) => e.key === 'Enter' && handleParse()}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
                                 <Button 
                                     size="icon" 
                                     variant="ghost" 
-                                    className={`h-8 w-8 transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400'}`}
+                                    className={`h-8 w-8 transition-colors ${isRecording ? 'text-destructive animate-pulse' : 'text-muted-foreground hover:text-primary'}`}
                                     onClick={isRecording ? stopRecording : startRecording}
                                     disabled={parsing}
                                     type="button"
@@ -258,8 +258,8 @@ export function SmartEntry() {
                                 onClick={isRecording ? stopRecording : startRecording}
                                 className={`flex-1 h-12 rounded-xl border-2 transition-all ${
                                     isRecording 
-                                        ? 'bg-red-50 border-red-200 text-red-600 animate-pulse' 
-                                        : 'hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 dark:border-slate-700 dark:text-slate-300'
+                                        ? 'bg-destructive/10 border-destructive/30 text-destructive animate-pulse' 
+                                        : 'hover:border-primary/50 hover:bg-accent text-foreground'
                                 }`}
                             >
                                 <Mic className={`mr-2 h-4 w-4 ${isRecording ? 'fill-red-600' : ''}`} />
@@ -273,7 +273,7 @@ export function SmartEntry() {
                                     className="hidden"
                                     onChange={(e) => handleFileUpload(e, 'image')}
                                 />
-                                <div className="flex items-center justify-center w-full h-12 rounded-xl border-dashed border-2 dark:border-slate-700 dark:text-slate-300 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                                <div className="flex items-center justify-center w-full h-12 rounded-xl border-dashed border-2 border-border text-foreground hover:border-primary/50 hover:bg-accent transition-colors">
                                     <ImageIcon className="mr-2 h-4 w-4" />
                                     Foto Struk
                                 </div>
@@ -282,7 +282,7 @@ export function SmartEntry() {
 
                         <Button
                             onClick={() => handleParse()}
-                            className="w-full h-12 rounded-xl bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-700 text-white font-semibold transition-all"
+                            className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all glow-primary"
                             disabled={parsing || !inputText.trim()}
                         >
                             {parsing ? (
@@ -300,24 +300,24 @@ export function SmartEntry() {
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-6 py-4">
-                        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-100 dark:border-indigo-800/50">
-                            <Label className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">Hasil Transkripsi AI</Label>
-                            <p className="text-sm italic text-slate-700 dark:text-slate-300 ml-1">
+                        <div className="p-3 bg-accent rounded-xl border border-border">
+                            <Label className="text-[10px] uppercase font-bold text-primary">Hasil Transkripsi AI</Label>
+                            <p className="text-sm italic text-foreground/80 ml-1">
                                 "{data.raw_input}"
                             </p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-sm font-medium dark:text-slate-300">Nama Barang</Label>
+                                <Label className="text-sm font-medium text-foreground">Nama Barang</Label>
                                 <Input
                                     value={data.item_name}
                                     onChange={(e) => setData('item_name', e.target.value)}
-                                    className="dark:bg-slate-800 border-gray-200 dark:border-slate-700"
+                                    className="bg-background"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-sm font-medium dark:text-slate-300">Total Harga (Rp)</Label>
+                                <Label className="text-sm font-medium text-foreground">Total Harga (Rp)</Label>
                                 <Input
                                     type="number"
                                     value={data.amount}
@@ -332,7 +332,7 @@ export function SmartEntry() {
                                             } : null
                                         }));
                                     }}
-                                    className="dark:bg-slate-800 border-gray-200 dark:border-slate-700"
+                                    className="bg-background"
                                 />
                             </div>
                         </div>
@@ -357,7 +357,7 @@ export function SmartEntry() {
                                                     cogs: qty > 0 ? Math.round(data.amount / qty) : 0
                                                 });
                                             }}
-                                            className="h-8 text-sm bg-white/50 dark:bg-slate-900/50 border-amber-200 dark:border-amber-800"
+                                            className="h-8 text-sm bg-background/50 border-amber-200 dark:border-amber-800"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
@@ -365,7 +365,7 @@ export function SmartEntry() {
                                         <select
                                             value={data.inventory.unit}
                                             onChange={(e) => setData('inventory', { ...data.inventory, unit: e.target.value })}
-                                            className="flex h-8 w-full rounded-md border border-amber-200 dark:border-amber-800 bg-white/50 dark:bg-slate-900/50 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500"
+                                            className="flex h-8 w-full rounded-md border border-amber-200 dark:border-amber-800 bg-background/50 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                         >
                                             <option value="pcs">pcs (biji)</option>
                                             <option value="kg">kg (kilogram)</option>
@@ -380,7 +380,7 @@ export function SmartEntry() {
                                     </div>
                                     <div className="space-y-1.5 opacity-70">
                                         <Label className="text-[10px] text-amber-800 dark:text-amber-500 font-bold">HARGA PER UNIT (AUTO)</Label>
-                                        <div className="h-8 flex items-center px-3 text-sm font-mono bg-slate-100 dark:bg-slate-800 rounded-md border border-amber-200 dark:border-amber-800">
+                                        <div className="h-8 flex items-center px-3 text-sm font-mono bg-muted rounded-md border border-amber-200 dark:border-amber-800">
                                             Rp {data.inventory.cogs.toLocaleString()}
                                         </div>
                                     </div>
@@ -390,21 +390,21 @@ export function SmartEntry() {
                                             type="number"
                                             value={data.inventory.expiry_days}
                                             onChange={(e) => setData('inventory', { ...data.inventory, expiry_days: parseInt(e.target.value) })}
-                                            className="h-8 text-sm bg-white/50 dark:bg-slate-900/50 border-amber-200 dark:border-amber-800"
+                                            className="h-8 text-sm bg-background/50 border-amber-200 dark:border-amber-800"
                                         />
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        <div className="flex gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                        <div className="flex gap-4 p-4 rounded-xl bg-muted border border-border">
                             <div className="flex-1">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Tipe</Label>
-                                <div className="mt-1 font-semibold dark:text-slate-200">{data.type === 'income' ? 'Pemasukan 💰' : 'Pengeluaran 💸'}</div>
+                                <div className="mt-1 font-semibold text-foreground">{data.type === 'income' ? 'Pemasukan 💰' : 'Pengeluaran 💸'}</div>
                             </div>
                             <div className="flex-1">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Kategori</Label>
-                                <div className="mt-1 font-semibold dark:text-slate-200 capitalize">{data.category.replace('_', ' ')}</div>
+                                <div className="mt-1 font-semibold text-foreground capitalize">{data.category.replace('_', ' ')}</div>
                             </div>
                         </div>
 
@@ -413,7 +413,7 @@ export function SmartEntry() {
                                 type="button"
                                 variant="outline"
                                 onClick={() => setParsedData(null)}
-                                className="flex-1 rounded-xl dark:border-slate-700 dark:text-slate-300"
+                                className="flex-1 rounded-xl"
                             >
                                 <X className="mr-2 h-4 w-4" />
                                 Ulangi
@@ -421,7 +421,7 @@ export function SmartEntry() {
                             <Button
                                 type="submit"
                                 disabled={processing}
-                                className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none transition-all"
+                                className="flex-1 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold glow-primary transition-all"
                             >
                                 {processing ? (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

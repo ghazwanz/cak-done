@@ -18,6 +18,7 @@ return [
 
         'vertex' => [
             'project_id' => env('VERTEX_PROJECT_ID'),
+            'bearer_token' => env('VERTEX_BEARER_TOKEN'),
             'location' => env('VERTEX_LOCATION', 'us-central1'),
             'model' => env('VERTEX_MODEL', 'gemini-2.5-flash'),
             'api_endpoint' => env('VERTEX_API_ENDPOINT', 'https://us-central1-aiplatform.googleapis.com'),

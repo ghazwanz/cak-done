@@ -20,6 +20,7 @@ Route::prefix('{current_team}')
 
         // Transactions (Workflow 1 & 2 Integration)
         Route::post('ai/process', [AiController::class, 'process'])->name('ai.process');
+        Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
         Route::post('transactions', [TransactionController::class, 'store'])->name('transactions.store');
 
         // Inventory (Workflow 2)

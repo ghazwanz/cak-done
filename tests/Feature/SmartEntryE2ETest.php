@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -39,20 +38,20 @@ class SmartEntryE2ETest extends TestCase
                                             'quantity' => 2,
                                             'unit' => 'pack',
                                             'expiry_days' => 30,
-                                            'cogs' => 25000
-                                        ]
-                                    ])
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ], 200)
+                                            'cogs' => 25000,
+                                        ],
+                                    ]),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
         ]);
 
         // 2. Phase 1: Parse the text
         $parseResponse = $this->post(route('transactions.parse', $team->slug), [
-            'text' => 'beli sosis kanzler 2 pack harga 50rb'
+            'text' => 'beli sosis kanzler 2 pack harga 50rb',
         ]);
 
         $parseResponse->assertStatus(200);
@@ -63,24 +62,24 @@ class SmartEntryE2ETest extends TestCase
 
         // 3. Phase 2: Store the confirmed transaction
         $storeResponse = $this->post(route('transactions.store', $team->slug), array_merge($extractedData, [
-            'raw_input' => 'beli sosis kanzler 2 pack harga 50rb'
+            'raw_input' => 'beli sosis kanzler 2 pack harga 50rb',
         ]));
 
         $storeResponse->assertRedirect();
-        
+
         // 4. Verify Database Persistence
         $this->assertDatabaseHas('transactions', [
             'team_id' => $team->id,
             'item_name' => 'Sosis Kanzler',
             'amount' => 50000,
-            'type' => 'expense'
+            'type' => 'expense',
         ]);
 
         $this->assertDatabaseHas('inventory_batches', [
             'team_id' => $team->id,
             'item_name' => 'Sosis Kanzler',
             'qty' => 2,
-            'unit' => 'pack'
+            'unit' => 'pack',
         ]);
     }
 }
