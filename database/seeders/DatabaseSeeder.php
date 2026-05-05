@@ -35,7 +35,20 @@ class DatabaseSeeder extends Seeder
             'user_id' => $owner->id,
         ]);
 
-        // 4. Seed inventory items & batches
-        $this->call(InventorySeeder::class);
+        // Buat beberapa item dasar
+        $items = ['Sosis Sapi', 'Ayam Frozen', 'Beras', 'Minyak Goreng'];
+
+        foreach ($items as $itemName) {
+            $item = InventoryItem::factory()->create([
+                'team_id' => $team->id,
+                'name' => $itemName,
+            ]);
+
+            InventoryBatch::factory(2)->create([
+                'team_id' => $team->id,
+                'inventory_item_id' => $item->id,
+                'item_name' => $itemName,
+            ]);
+        }
     }
 }

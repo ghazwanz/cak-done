@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Contracts\AiProvider;
 use App\Models\Team;
 use App\Models\Transaction;
+use App\Services\CashFlowPredictor;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +16,8 @@ class TransactionController extends Controller
 {
     public function __construct(
         protected AiProvider $ai,
-        protected TransactionService $transactionService
+        protected TransactionService $transactionService,
+        protected CashFlowPredictor $cashFlowPredictor
     ) {}
 
     /**
@@ -51,9 +53,18 @@ class TransactionController extends Controller
                 imagePath: $imagePath
             );
 
+            $liquidityWarning = null;
+            if ($parsedData['type'] === 'expense' && isset($parsedData['items'])) {
+                $totalExpense = collect($parsedData['items'])->sum('amount');
+                if ($this->cashFlowPredictor->wouldCauseLiquidityCrisis($current_team, $totalExpense)) {
+                    $liquidityWarning = 'Peringatan: Pengeluaran ini (Rp '.number_format($totalExpense, 0, ',', '.').') dapat mengganggu likuiditas dalam 7 hari ke depan.';
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => $parsedData,
+                'liquidity_warning' => $liquidityWarning,
                 'raw_input' => $request->input('text') ?? 'Multimodal Input',
             ]);
         } catch (\Exception $e) {

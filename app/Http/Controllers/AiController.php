@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Contracts\AiProvider;
 use App\Models\Team;
 use App\Services\Ai\AggregatorService;
+use App\Services\CashFlowPredictor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -13,7 +14,8 @@ class AiController extends Controller
 {
     public function __construct(
         protected AiProvider $ai,
-        protected AggregatorService $aggregator
+        protected AggregatorService $aggregator,
+        protected CashFlowPredictor $cashFlowPredictor
     ) {}
 
     /**
@@ -74,10 +76,20 @@ class AiController extends Controller
                 $imagePath ? Storage::path($imagePath) : null
             );
 
+            // Liquidity Warning Check
+            $liquidityWarning = null;
+            if ($parsed['type'] === 'expense' && isset($parsed['items'])) {
+                $totalExpense = collect($parsed['items'])->sum('amount');
+                if ($this->cashFlowPredictor->wouldCauseLiquidityCrisis($team, $totalExpense)) {
+                    $liquidityWarning = 'Peringatan: Pengeluaran ini (Rp '.number_format($totalExpense, 0, ',', '.').') dapat mengganggu likuiditas dalam 7 hari ke depan. Pastikan ketersediaan dana.';
+                }
+            }
+
             return response()->json([
                 'intent' => 'RECORD',
                 'success' => true,
                 'data' => $parsed,
+                'liquidity_warning' => $liquidityWarning,
                 'message' => 'Silakan konfirmasi data transaksi di bawah ini.',
             ]);
         } catch (\Exception $e) {

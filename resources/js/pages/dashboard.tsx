@@ -1,9 +1,15 @@
 import { Head } from '@inertiajs/react';
 import { dashboard } from '@/routes';
 import { FormEvent, useState } from 'react';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 // import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 // import { Link } from '@inertiajs/react';
 // import AppLayout from '@/layouts/app-layout'; // Pastikan path ini sesuai dengan layout bawaan projectmu
+
+interface ForecastData {
+    date: string;
+    predicted_balance: number;
+}
 
 interface Props {
     auth: {
@@ -12,9 +18,13 @@ interface Props {
             email: string;
         };
     };
+    currentBalance?: number;
+    forecast7Days?: ForecastData[];
+    forecast30Days?: ForecastData[];
+    teamSlug?: string;
 }
 
-export default function Dashboard({ auth }: Props) {
+export default function Dashboard({ auth, currentBalance = 0, forecast7Days = [], forecast30Days = [], teamSlug }: Props) {
     return (
         <>
             <Head title="Dashboard Utama - Cak DONE" />
@@ -64,11 +74,15 @@ export default function Dashboard({ auth }: Props) {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-sm text-slate-500 font-semibold uppercase tracking-wider">Total Saldo Kas</p>
+                                <p className="text-sm text-slate-500 font-semibold uppercase tracking-wider">Total Kas Usaha</p>
                                 <div className="bg-blue-50 text-blue-600 p-2.5 rounded-xl"><i className="fas fa-wallet text-lg"></i></div>
                             </div>
-                            <h3 className="text-3xl font-extrabold text-slate-800 mb-2">Rp 4.250.000</h3>
-                            <p className="text-sm text-green-600 font-bold"><i className="fas fa-arrow-trend-up text-xs"></i> +12% <span className="text-slate-400 font-normal">vs minggu lalu</span></p>
+                            <h3 className="text-3xl font-extrabold text-slate-800 mb-2">
+                                Rp {currentBalance.toLocaleString('id-ID')}
+                            </h3>
+                            <a href={`/${teamSlug}/reports/cashflow`} target="_blank" className="text-sm text-blue-600 font-bold hover:underline">
+                                <i className="fas fa-file-pdf mr-1"></i> Cetak Laporan (IAI)
+                            </a>
                         </div>
 
                         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
@@ -95,6 +109,36 @@ export default function Dashboard({ auth }: Props) {
 
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
+                        {/* Cashflow Prediction Chart */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col xl:col-span-2">
+                            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                    <div className="bg-emerald-100 text-emerald-500 w-8 h-8 rounded-lg flex items-center justify-center"><i className="fas fa-chart-line"></i></div>
+                                    Prediksi Arus Kas (7 Hari ke Depan)
+                                </h3>
+                            </div>
+                            <div className="p-6 flex-1 h-[300px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={forecast7Days} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(value) => `Rp ${(value / 1000).toFixed(0)}k`} />
+                                        <Tooltip 
+                                            formatter={(value: number) => [`Rp ${value.toLocaleString('id-ID')}`, 'Prediksi Saldo']}
+                                            labelFormatter={(label) => `Tanggal: ${label}`}
+                                            contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        />
+                                        <Area type="monotone" dataKey="predicted_balance" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorBalance)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
 
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col">
                             <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl">
