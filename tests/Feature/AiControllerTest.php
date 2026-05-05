@@ -1,9 +1,12 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 test('ai process handles text and returns record intent', function () {
-    $user = User::factory()->withPersonalTeam()->create();
+    $user = User::factory()->create();
     $team = $user->personalTeam();
 
     $response = $this->actingAs($user)

@@ -50,8 +50,9 @@ class SmartEntryE2ETest extends TestCase
         ]);
 
         // 2. Phase 1: Parse the text
-        $parseResponse = $this->post(route('transactions.parse', $team->slug), [
+        $parseResponse = $this->post(route('ai.process', $team->slug), [
             'text' => 'beli sosis kanzler 2 pack harga 50rb',
+            'intent_context' => 'smart_entry',
         ]);
 
         $parseResponse->assertStatus(200);
