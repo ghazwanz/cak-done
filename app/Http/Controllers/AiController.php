@@ -7,6 +7,7 @@ use App\Models\Team;
 use App\Services\Ai\AggregatorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class AiController extends Controller
 {
@@ -69,8 +70,8 @@ class AiController extends Controller
         try {
             $parsed = $this->ai->parseTransaction(
                 $text,
-                $audioPath ? storage_path('app/'.$audioPath) : null,
-                $imagePath ? storage_path('app/'.$imagePath) : null
+                $audioPath ? Storage::path($audioPath) : null,
+                $imagePath ? Storage::path($imagePath) : null
             );
 
             return response()->json([
