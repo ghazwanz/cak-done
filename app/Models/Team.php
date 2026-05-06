@@ -112,6 +112,16 @@ class Team extends Model
     }
 
     /**
+     * Get all recurring expenses for this team.
+     *
+     * @return HasMany<RecurringExpense, $this>
+     */
+    public function recurringExpenses(): HasMany
+    {
+        return $this->hasMany(RecurringExpense::class);
+    }
+
+    /**
      * Get all inventory items for this team.
      *
      * @return HasMany<InventoryItem, $this>

@@ -13,6 +13,30 @@ class Transaction extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'is_business' => 'boolean',
+    ];
+
+    public function scopeBusiness($query)
+    {
+        return $query->where('is_business', true);
+    }
+
+    public function scopePersonal($query)
+    {
+        return $query->where('is_business', false);
+    }
+
+    public function scopeIncome($query)
+    {
+        return $query->where('type', 'income');
+    }
+
+    public function scopeExpense($query)
+    {
+        return $query->where('type', 'expense');
+    }
+
     public function team()
     {
         return $this->belongsTo(Team::class);

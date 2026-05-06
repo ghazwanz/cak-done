@@ -1,6 +1,6 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import { formatDistanceToNow, isBefore, addDays, parseISO } from 'date-fns';
-import { MoreHorizontal, Package, Trash2, Edit, AlertTriangle } from 'lucide-react';
+import { MoreHorizontal, Package, Trash2, Edit, AlertTriangle, ArrowUpCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,9 +18,20 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import * as inventory from '@/routes/inventory';
+import { useState } from 'react';
 
 interface Batch {
     id: number;
@@ -35,13 +46,26 @@ interface Batch {
     };
 }
 
-interface Props {
+interface LowStockItem {
+    id: number;
+    name: string;
+    low_stock_threshold: number;
     batches: Batch[];
 }
 
-export default function InventoryIndex({ batches }: Props) {
+interface Props {
+    batches: Batch[];
+    lowStockItems: LowStockItem[];
+}
+
+export default function InventoryIndex({ batches, lowStockItems }: Props) {
     const { currentTeam } = usePage().props as any;
     const isOwner = currentTeam?.role === 'owner';
+
+    const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
+    const [editQty, setEditQty] = useState<string>('');
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [batchToDelete, setBatchToDelete] = useState<number | null>(null);
 
     const expiredCount = batches.filter((b) => {
         const today = new Date();
@@ -57,6 +81,29 @@ export default function InventoryIndex({ batches }: Props) {
 
         return !isBefore(expiry, today) && isBefore(expiry, addDays(today, 7));
     }).length;
+
+    const handleUpdateQty = () => {
+        if (!editingBatch) return;
+
+        router.patch(`/${currentTeam.slug}/inventory/${editingBatch.id}`, {
+            qty: parseInt(editQty),
+        }, {
+            onSuccess: () => {
+                setEditingBatch(null);
+            }
+        });
+    };
+
+    const handleDeleteBatch = () => {
+        if (batchToDelete === null) return;
+
+        router.delete(`/${currentTeam.slug}/inventory/${batchToDelete}`, {
+            onSuccess: () => {
+                setIsDeleteDialogOpen(false);
+                setBatchToDelete(null);
+            }
+        });
+    };
 
     const getStatusVariant = (expiryDate: string) => {
         const today = new Date();
@@ -104,7 +151,7 @@ export default function InventoryIndex({ batches }: Props) {
                 </div>
 
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <Card className="bg-card border-border">
                         <CardContent className="p-5">
                             <div className="flex items-center gap-3">
@@ -144,7 +191,63 @@ export default function InventoryIndex({ batches }: Props) {
                             </div>
                         </CardContent>
                     </Card>
+                    <Card className="bg-card border-border">
+                        <CardContent className="p-5">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                                    <ArrowUpCircle className="h-5 w-5 text-rose-500" />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground font-medium">Low Stock</p>
+                                    <p className="text-2xl font-bold text-rose-500">{lowStockItems.length}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
+
+                {/* Replenishment Suggestions */}
+                {lowStockItems.length > 0 && (
+                    <Card className="border-rose-500/50 bg-rose-500/5 overflow-hidden">
+                        <CardHeader className="px-6 py-4">
+                            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                                <ArrowUpCircle className="h-5 w-5" />
+                                <CardTitle className="text-lg font-bold">Replenishment Required</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="px-6 pb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {lowStockItems.map(item => {
+                                    const currentStock = item.batches.reduce((sum, b) => sum + b.qty, 0);
+                                    return (
+                                        <div key={item.id} className="flex flex-col p-3 rounded-xl bg-background border border-border shadow-sm">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="font-bold text-foreground">{item.name}</span>
+                                                <Badge variant="destructive" className="text-[10px] px-1.5 h-4">CRITICAL</Badge>
+                                            </div>
+                                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                                <span>Sisa Stok:</span>
+                                                <span className="font-medium text-rose-500">{currentStock}</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs text-muted-foreground">
+                                                <span>Minimum:</span>
+                                                <span className="font-medium">{item.low_stock_threshold}</span>
+                                            </div>
+                                            <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
+                                                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-rose-500 rounded-full"
+                                                        style={{ width: `${Math.min(100, (currentStock / item.low_stock_threshold) * 100)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Table */}
                 <Card className="border-border bg-card overflow-hidden">
@@ -220,11 +323,23 @@ export default function InventoryIndex({ batches }: Props) {
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end" className="w-40">
-                                                                <DropdownMenuItem className="gap-2 cursor-pointer">
+                                                                <DropdownMenuItem
+                                                                    className="gap-2 cursor-pointer"
+                                                                    onClick={() => {
+                                                                        setEditingBatch(batch);
+                                                                        setEditQty(batch.qty.toString());
+                                                                    }}
+                                                                >
                                                                     <Edit className="h-4 w-4" />
                                                                     Edit Batch
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuItem className="gap-2 cursor-pointer text-destructive focus:text-destructive">
+                                                                <DropdownMenuItem
+                                                                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                                                                    onClick={() => {
+                                                                        setBatchToDelete(batch.id);
+                                                                        setIsDeleteDialogOpen(true);
+                                                                    }}
+                                                                >
                                                                     <Trash2 className="h-4 w-4" />
                                                                     Delete
                                                                 </DropdownMenuItem>
@@ -240,6 +355,53 @@ export default function InventoryIndex({ batches }: Props) {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Edit Qty Dialog */}
+                <Dialog open={!!editingBatch} onOpenChange={(open) => !open && setEditingBatch(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Update Stock Quantity</DialogTitle>
+                            <DialogDescription>
+                                Masukkan jumlah stok terbaru untuk {editingBatch?.inventory_item?.name || editingBatch?.item_name}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="qty" className="text-right">
+                                    Quantity
+                                </Label>
+                                <Input
+                                    id="qty"
+                                    type="number"
+                                    value={editQty}
+                                    onChange={(e) => setEditQty(e.target.value)}
+                                    className="col-span-3"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setEditingBatch(null)}>Cancel</Button>
+                            <Button onClick={handleUpdateQty}>Simpan Perubahan</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Delete Confirmation Dialog */}
+                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle className="text-destructive">Delete Batch?</DialogTitle>
+                            <DialogDescription>
+                                Tindakan ini tidak dapat dibatalkan. Batch stok ini akan dihapus permanen dari sistem.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Batal</Button>
+                            <Button variant="destructive" onClick={handleDeleteBatch}>Ya, Hapus Permanen</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </>
     );
