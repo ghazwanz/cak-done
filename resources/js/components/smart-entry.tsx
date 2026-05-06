@@ -1,5 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -15,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Mic, Image as ImageIcon, Send, Loader2, Check, X, Square } from 'lucide-react';
 import { toast } from 'sonner';
+import { AudioWaveform } from './audio-waveform';
 
 import * as ai from '@/routes/ai';
 import * as transactions from '@/routes/transactions';
@@ -25,12 +36,19 @@ interface ParsedData {
     type: 'income' | 'expense';
     category: string;
     is_business: boolean;
+    liquidity_warning?: string;
+    inventory_info?: {
+        current_qty: number;
+        unit: string;
+        threshold: number;
+    } | null;
 }
 
 export function SmartEntry() {
     const { currentTeam } = usePage().props as any;
     const [open, setOpen] = useState(false);
     const [parsing, setParsing] = useState(false);
+    const [warningOpen, setWarningOpen] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [inputText, setInputText] = useState('');
     const [parsedData, setParsedData] = useState<ParsedData | null>(null);
@@ -111,6 +129,8 @@ export function SmartEntry() {
         type: 'expense' as 'income' | 'expense',
         category: '',
         is_business: true,
+        is_recurring: false,
+        frequency: 'monthly',
         raw_input: '',
         inventory: {
             quantity: 0,
@@ -142,16 +162,25 @@ export function SmartEntry() {
             const result = await response.json();
 
             if (result.success && result.data) {
-                setParsedData(result.data);
+                setParsedData({
+                    ...result.data,
+                    liquidity_warning: result.liquidity_warning,
+                    inventory_info: result.inventory_info,
+                });
                 setData({
                     item_name: result.data.item_name || '',
                     amount: result.data.amount || 0,
                     type: result.data.type || 'expense',
                     category: result.data.category || '',
                     is_business: result.data.is_business ?? true,
+                    is_recurring: result.data.is_recurring ?? false,
+                    frequency: result.data.frequency || 'monthly',
                     raw_input: result.data.transcription || (mode === 'text' ? inputText : `Multimodal (${mode})`),
                     inventory: result.data.inventory || null,
                 });
+                if (result.inventory_info) {
+                    toast.info(`Info Stok: ${result.inventory_info.current_qty} ${result.inventory_info.unit} tersedia.`);
+                }
                 toast.success('Berhasil menganalisis ' + mode + '!');
             } else {
                 toast.error(result.message || 'Gagal menganalisis.');
@@ -165,9 +194,21 @@ export function SmartEntry() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Show warning if it exists and we haven't accepted it yet
+        if (parsedData?.liquidity_warning && !warningOpen) {
+            setWarningOpen(true);
+            return; // Stop here, the user needs to confirm on the warning dialog
+        }
+
+        executeSubmit();
+    };
+
+    const executeSubmit = () => {
         post(transactions.store.url(currentTeam.slug), {
             onSuccess: () => {
                 setOpen(false);
+                setWarningOpen(false);
                 reset();
                 setInputText('');
                 setParsedData(null);
@@ -177,6 +218,7 @@ export function SmartEntry() {
     };
 
     return (
+        <>
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button
@@ -211,6 +253,7 @@ export function SmartEntry() {
                                     
                                     <div className="space-y-2">
                                         <h2 className="text-3xl font-bold text-white tracking-tight">Mendengarkan...</h2>
+                                        <AudioWaveform isRecording={isRecording} />
                                         <p className="text-red-400 font-mono text-2xl">{formatTime(recordingTime)}</p>
                                         <p className="text-muted-foreground italic">"Jual bakso 5 porsi..."</p>
                                     </div>
@@ -435,5 +478,33 @@ export function SmartEntry() {
                 )}
             </DialogContent>
         </Dialog>
+
+        <AlertDialog open={warningOpen} onOpenChange={setWarningOpen}>
+            <AlertDialogContent className="border-none shadow-2xl glass bg-card max-w-[400px]">
+                <AlertDialogHeader>
+                    <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                        <X className="h-6 w-6 text-destructive" />
+                    </div>
+                    <AlertDialogTitle className="text-xl font-bold text-center">Peringatan Likuiditas</AlertDialogTitle>
+                    <AlertDialogDescription className="text-muted-foreground text-center">
+                        {parsedData?.liquidity_warning}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+                    <AlertDialogCancel asChild>
+                        <Button variant="outline" className="flex-1 rounded-xl">Batal</Button>
+                    </AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                        <Button 
+                            className="flex-1 rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground glow-destructive"
+                            onClick={executeSubmit}
+                        >
+                            Tetap Simpan
+                        </Button>
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </>
     );
 }

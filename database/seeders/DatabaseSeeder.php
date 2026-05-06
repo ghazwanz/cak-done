@@ -14,6 +14,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Avoid running heavy application seeders during automated tests
+        if (app()->environment('testing')) {
+            return;
+        }
+
         // 1. Buat User Pemilik (Pak Budi)
         $owner = User::factory()->create([
             'name' => 'Pak Budi',

@@ -54,6 +54,8 @@ class TransactionController extends Controller
             );
 
             $liquidityWarning = null;
+            $inventoryInfo = null;
+
             if ($parsedData['type'] === 'expense' && isset($parsedData['items'])) {
                 $totalExpense = collect($parsedData['items'])->sum('amount');
                 if ($this->cashFlowPredictor->wouldCauseLiquidityCrisis($current_team, $totalExpense)) {
@@ -61,10 +63,25 @@ class TransactionController extends Controller
                 }
             }
 
+            // Visual stock info for Smart Entry (Workflow 2 point 4)
+            $inventoryItem = $current_team->inventoryItems()
+                ->where('name', 'ILIKE', $parsedData['item_name'] ?? '')
+                ->first();
+
+            if ($inventoryItem) {
+                $inventoryInfo = [
+                    'item_id' => $inventoryItem->id,
+                    'current_qty' => $inventoryItem->batches()->sum('qty'),
+                    'unit' => $inventoryItem->unit,
+                    'threshold' => $inventoryItem->low_stock_threshold,
+                ];
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => $parsedData,
                 'liquidity_warning' => $liquidityWarning,
+                'inventory_info' => $inventoryInfo,
                 'raw_input' => $request->input('text') ?? 'Multimodal Input',
             ]);
         } catch (\Exception $e) {
@@ -86,6 +103,8 @@ class TransactionController extends Controller
             'category' => 'required|string',
             'is_business' => 'required|boolean',
             'raw_input' => 'nullable|string',
+            'is_recurring' => 'nullable|boolean',
+            'frequency' => 'nullable|string',
         ]);
 
         $this->transactionService->createTransaction(

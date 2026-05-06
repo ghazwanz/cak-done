@@ -27,6 +27,8 @@ Route::prefix('{current_team}')
 
         // Inventory (Workflow 2)
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::patch('inventory/{id}', [InventoryController::class, 'update'])->name('inventory.update');
+        Route::delete('inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
 
         // Reports (Workflow 3)
         Route::get('/reports/cashflow', [ReportController::class, 'generateCashflow'])->name('reports.cashflow');

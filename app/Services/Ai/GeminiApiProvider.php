@@ -118,6 +118,9 @@ class GeminiApiProvider implements AiProvider
         3. INCOME vs EXPENSE: 
            - "Jual", "Laku", "Masuk", "Diterima" -> type: "income"
            - "Beli", "Bayar", "Keluar", "Makan", "Bensin" -> type: "expense"
+        4. RECURRING DETECTION: 
+           - Detect if an expense is a recurring bill (monthly/weekly/daily). 
+           - Keywords like "tagihan", "bayar wifi", "listrik", "gaji", "sewa", "langganan" often signify recurring expenses.
         
         Return the result in JSON format with the following keys:
         - transcription: (string) your word-for-word or best-effort transcription of the input
@@ -126,11 +129,20 @@ class GeminiApiProvider implements AiProvider
         - type: (string) "income" or "expense"
         - category: (string) "penjualan", "bahan_baku", "operasional", etc.
         - is_business: (boolean) true if it's for the business, false if personal
-        - inventory: (optional object) only if type is "expense" and category is "bahan_baku":
-            - quantity: (integer) number of items/kg
-            - unit: (string) "kg", "pcs", "liter", etc.
-            - expiry_days: (integer) estimated days until expiry if not specified
-            - cogs: (integer) cost per unit
+        - is_recurring: (boolean) true if this looks like a regular bill/expense
+        - frequency: (string) only if is_recurring is true. Choose: "daily", "weekly", "monthly", "yearly"
+        - inventory: (optional object) 
+            - IF `type` is "expense" (Buying stock):
+                - quantity: (integer) number of items/kg bought
+                - unit: (string) "kg", "pcs", "liter", etc.
+                - cogs: (integer) cost per 1 unit
+            - IF `type` is "income" (Selling stock):
+                - quantity: (integer) number of items sold
+                - unit: (string) e.g., "kg", "pcs"
+        
+        LOGIC FOR SALE (Income):
+        If the user says "Jual [Item] [Quantity]", you MUST calculate the `amount` based on context. 
+        However, if you are providing the `inventory.quantity` for a sale, its purpose is to let the system know how much to deduct from stock.
         
         If you are unsure about the category, use the most logical one for a culinary SME.
         PROMPT;

@@ -85,11 +85,52 @@ class AiController extends Controller
                 }
             }
 
+            // Visual stock info for Smart Entry (Workflow 2 point 4)
+            $inventoryInfo = null;
+            $suggestedPrice = null;
+
+            $itemName = $parsed['item_name'] ?? null;
+            $inventoryItem = null;
+
+            if ($itemName) {
+                $inventoryItem = $team->inventoryItems()
+                    ->where('name', 'ILIKE', $itemName)
+                    ->with(['batches' => fn ($q) => $q->where('qty', '>', 0)->orderBy('expiry_date', 'asc')])
+                    ->first();
+            }
+
+            if ($inventoryItem) {
+                $totalQty = (int) $inventoryItem->batches->sum('qty');
+                $inventoryInfo = [
+                    'item_id' => $inventoryItem->id,
+                    'current_qty' => $totalQty,
+                    'unit' => $inventoryItem->unit,
+                    'threshold' => $inventoryItem->low_stock_threshold,
+                ];
+
+                // Suggest price based on COGS if amount is missing or low
+                if ($parsed['type'] === 'income' && empty($parsed['amount'])) {
+                    $firstBatch = $inventoryItem->batches->first();
+                    $quantityToSell = (float) ($parsed['inventory']['quantity'] ?? 1);
+
+                    if ($firstBatch) {
+                        // Default markup 20% from COGS for suggestion if AI forgot price
+                        $cogs = (float) ($firstBatch->cogs > 0 ? $firstBatch->cogs : 10000); // Fallback to 10k if COGS is 0
+                        $suggestedPrice = round($cogs * $quantityToSell * 1.2);
+
+                        $parsed['amount'] = (int) $suggestedPrice;
+                        $parsed['inventory']['quantity'] = $quantityToSell; // Ensure quantity is set for deduction
+                        $parsed['transcription'] = ($parsed['transcription'] ?? '').' (Harga disesuaikan otomatis dari modal: Rp '.number_format($parsed['amount'], 0, ',', '.').')';
+                    }
+                }
+            }
+
             return response()->json([
                 'intent' => 'RECORD',
                 'success' => true,
                 'data' => $parsed,
                 'liquidity_warning' => $liquidityWarning,
+                'inventory_info' => $inventoryInfo,
                 'message' => 'Silakan konfirmasi data transaksi di bawah ini.',
             ]);
         } catch (\Exception $e) {
