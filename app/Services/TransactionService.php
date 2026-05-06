@@ -132,14 +132,18 @@ class TransactionService
      */
     protected function processInventory(Team $team, array $validated, array $inventory): void
     {
-        // 1. Find or create the InventoryItem for this team
-        $inventoryItem = $team->inventoryItems()->firstOrCreate(
-            ['name' => $validated['item_name']],
-            [
+        // 1. Find or create the InventoryItem for this team (Case-insensitive for PGSQL)
+        $inventoryItem = $team->inventoryItems()
+            ->whereRaw('LOWER(name) = LOWER(?)', [$validated['item_name']])
+            ->first();
+
+        if (! $inventoryItem) {
+            $inventoryItem = $team->inventoryItems()->create([
+                'name' => $validated['item_name'],
                 'unit' => $inventory['unit'] ?? 'pcs',
                 'category' => $validated['category'],
-            ]
-        );
+            ]);
+        }
 
         // 2. Create the specific batch
         $team->inventoryBatches()->create([
@@ -158,8 +162,10 @@ class TransactionService
      */
     protected function deductInventoryForSale(Team $team, array $validated, ?array $inventory): void
     {
-        // Check if there's an inventory item matching the transaction item_name
-        $inventoryItem = $team->inventoryItems()->where('name', $validated['item_name'])->first();
+        // Check if there's an inventory item matching the transaction item_name (Case-insensitive for PGSQL)
+        $inventoryItem = $team->inventoryItems()
+            ->whereRaw('LOWER(name) = LOWER(?)', [$validated['item_name']])
+            ->first();
 
         if (! $inventoryItem) {
             return;
@@ -167,6 +173,16 @@ class TransactionService
 
         // Use quantity from metadata if available, else default to 1 (standard sale unit)
         $quantityToDeduct = $inventory['quantity'] ?? 1;
+
+        $totalAvailable = $team->inventoryBatches()
+            ->where('inventory_item_id', $inventoryItem->id)
+            ->sum('qty');
+
+        if ($totalAvailable < $quantityToDeduct) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'item_name' => ["Waduh rek, stok gak cukup. Sisa mung {$totalAvailable} {$inventoryItem->unit}, tapi sampeyan dodol {$quantityToDeduct}."],
+            ]);
+        }
 
         // Get batches ordered by expiry date (FEFO - First Expired First Out)
         $batches = $team->inventoryBatches()

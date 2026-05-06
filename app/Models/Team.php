@@ -41,7 +41,7 @@ class Team extends Model
     /**
      * Get the team owner.
      */
-    public function owner(): ?Model
+    public function getOwnerAttribute(): ?User
     {
         return $this->members()
             ->wherePivot('role', TeamRole::Owner->value)
