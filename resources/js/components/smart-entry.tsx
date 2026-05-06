@@ -123,7 +123,7 @@ export function SmartEntry() {
         }
     };
 
-    const { data, setData, post, processing, reset } = useForm({
+    const { data, setData, post, processing, reset, errors } = useForm({
         item_name: '',
         amount: 0,
         type: 'expense' as 'income' | 'expense',
@@ -176,7 +176,12 @@ export function SmartEntry() {
                     is_recurring: result.data.is_recurring ?? false,
                     frequency: result.data.frequency || 'monthly',
                     raw_input: result.data.transcription || (mode === 'text' ? inputText : `Multimodal (${mode})`),
-                    inventory: result.data.inventory || null,
+                    inventory: result.data.inventory ? {
+                        quantity: result.data.inventory.quantity || 0,
+                        unit: result.data.inventory.unit || '',
+                        expiry_days: result.data.inventory.expiry_days || 0,
+                        cogs: result.data.inventory.cogs || (result.data.inventory.quantity > 0 ? Math.round(result.data.amount / result.data.inventory.quantity) : 0),
+                    } : null,
                 });
                 if (result.inventory_info) {
                     toast.info(`Info Stok: ${result.inventory_info.current_qty} ${result.inventory_info.unit} tersedia.`);
@@ -213,6 +218,16 @@ export function SmartEntry() {
                 setInputText('');
                 setParsedData(null);
                 toast.success('Transaksi berhasil disimpan!');
+            },
+            onError: (errors) => {
+                if (errors.item_name) {
+                    toast.error(errors.item_name, {
+                        duration: 5000,
+                        className: 'bg-destructive text-destructive-foreground font-bold',
+                    });
+                } else {
+                    toast.error('Gagal menyimpan transaksi. Cek kembali data yang diinput.');
+                }
             },
         });
     };
@@ -356,8 +371,11 @@ export function SmartEntry() {
                                 <Input
                                     value={data.item_name}
                                     onChange={(e) => setData('item_name', e.target.value)}
-                                    className="bg-background"
+                                    className={`bg-background ${errors.item_name ? 'border-destructive' : ''}`}
                                 />
+                                {errors.item_name && (
+                                    <p className="text-[10px] text-destructive font-bold uppercase animate-bounce">{errors.item_name}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-sm font-medium text-foreground">Total Harga (Rp)</Label>
