@@ -65,7 +65,7 @@ class TransactionController extends Controller
 
             // Visual stock info for Smart Entry (Workflow 2 point 4)
             $inventoryItem = $current_team->inventoryItems()
-                ->where('name', 'ILIKE', $parsedData['item_name'] ?? '')
+                ->whereRaw('LOWER(name) = LOWER(?)', [$parsedData['item_name'] ?? ''])
                 ->first();
 
             if ($inventoryItem) {
