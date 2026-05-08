@@ -22,12 +22,18 @@ Route::prefix('{current_team}')
 
         // Transactions (Workflow 1 & 2 Integration)
         Route::post('ai/process', [AiController::class, 'process'])->name('ai.process');
+        Route::post('ai/chat/save', [AiController::class, 'saveChatHistory'])->name('ai.chat.save');
+        Route::post('ai/chat/clear', [AiController::class, 'clearChatHistory'])->name('ai.chat.clear');
+
         Route::post('transactions/parse', [TransactionController::class, 'parse'])->name('transactions.parse');
         Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
         Route::post('transactions', [TransactionController::class, 'store'])->name('transactions.store');
 
         // Inventory (Workflow 2)
         Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::post('inventory/items', [InventoryController::class, 'storeItem'])->name('inventory.items.store');
+        Route::patch('inventory/items/{id}', [InventoryController::class, 'updateItem'])->name('inventory.items.update');
+        Route::delete('inventory/items/{id}', [InventoryController::class, 'destroyItem'])->name('inventory.items.destroy');
         Route::patch('inventory/{id}', [InventoryController::class, 'update'])->name('inventory.update');
         Route::delete('inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
 

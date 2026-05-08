@@ -7,9 +7,9 @@ use App\Models\Team;
 use App\Services\Ai\AggregatorService;
 use App\Services\CashFlowPredictor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AiController extends Controller
@@ -22,6 +22,11 @@ class AiController extends Controller
 
     public function catat(Team $current_team)
     {
+        $history = DB::table('ai_insights')
+            ->where('team_id', $current_team->id)
+            ->where('type', 'chat_history')
+            ->first();
+
         return Inertia::render('catat/index', [
             'recentTransactions' => $current_team->transactions()
                 ->latest()
@@ -32,7 +37,34 @@ class AiController extends Controller
                 ->whereRaw('(SELECT COALESCE(SUM(qty), 0) FROM inventory_batches WHERE inventory_item_id = inventory_items.id) <= low_stock_threshold')
                 ->take(5)
                 ->get(),
+            'initialChatHistory' => $history ? json_decode($history->data, true) : [],
         ]);
+    }
+
+    public function saveChatHistory(Request $request, Team $current_team)
+    {
+        $messages = $request->input('messages', []);
+
+        DB::table('ai_insights')->updateOrInsert(
+            ['team_id' => $current_team->id, 'type' => 'chat_history'],
+            [
+                'data' => json_encode($messages),
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
+        return response()->json(['success' => true]);
+    }
+
+    public function clearChatHistory(Team $current_team)
+    {
+        DB::table('ai_insights')
+            ->where('team_id', $current_team->id)
+            ->where('type', 'chat_history')
+            ->delete();
+
+        return back();
     }
 
     /**
@@ -92,6 +124,15 @@ class AiController extends Controller
                 $audioPath ? Storage::path($audioPath) : null,
                 $imagePath ? Storage::path($imagePath) : null
             );
+
+            if (isset($parsed['out_of_context']) && $parsed['out_of_context'] === true) {
+                return response()->json([
+                    'intent' => 'OOC',
+                    'success' => true,
+                    'message' => 'Sepurane rek, aku iki mung asisten ngurus keuangan ambek stok tokomu tok. Lek soal liyane iku aku ga paham.',
+                    'data' => null,
+                ]);
+            }
 
             // Liquidity Warning Check
             $liquidityWarning = null;
@@ -168,26 +209,41 @@ class AiController extends Controller
         // SQL-First: Get clean aggregates instead of raw rows
         $summary = $this->aggregator->getFinancialSummary($team, now()->startOfMonth()->toDateString(), now()->toDateString());
 
+        // Add more context for richer AI responses
+        $summary['inventory_health'] = $this->aggregator->getInventoryHealth($team);
+        $summary['holiday_predictions'] = $this->aggregator->getUpcomingHolidayPredictions($team);
+
         // Final Narration by AI using provided aggregates as context
         $narration = $this->ai->narrateInsights($text, $summary);
+
+        $isRejected = str_starts_with($narration, '[REJECT]');
+        if ($isRejected) {
+            $narration = trim(str_replace('[REJECT]', '', $narration));
+        }
+
+        // Determine if we should show the full summary card
+        // Show summary if query contains keywords for detailed data and NOT rejected
+        $showSummary = ! $isRejected && (bool) preg_match('/(ringkasan|summary|laporan|semua|performa|statistik|grafik|total|berapa)/i', $text);
 
         return response()->json([
             'intent' => 'QUERY',
             'success' => true,
             'narration' => $narration,
             'data' => $summary,
+            'show_summary' => $showSummary,
         ]);
     }
 
     protected function detectInquiryIntent(string $text): bool
     {
-        $keywords = ['profit', 'laba', 'berapa', 'mana', 'tampilkan', 'info', 'summary', 'ringkasan', 'stok'];
-        foreach ($keywords as $word) {
-            if (stripos($text, $word) !== false) {
-                return true;
-            }
+        // 1. Jika teks diawali dengan kata kerja pencatatan secara eksplisit, ini pasti RECORD.
+        if (preg_match('/^(jual|beli|bayar|tambah|kurangi|masuk|keluar)\b/i', trim($text))) {
+            return false;
         }
 
-        return false;
+        // 2. Deteksi kata tanya (Indonesia/Suroboyoan) dan istilah analitik/kesehatan stok
+        $inquiryPattern = '/\b(apa|opo|berapa|piro|mana|endi|kapan|bagaimana|piye|sebutkan|tampilkan|berikan|info|summary|ringkasan|laporan|statistik|grafik|profit|laba|untung|rugi|kadaluarsa|expired|basi|sisa|stok|paling laku|terlaris|analisis|prediksi)\b/i';
+
+        return (bool) preg_match($inquiryPattern, $text);
     }
 }

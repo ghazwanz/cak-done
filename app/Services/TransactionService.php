@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use App\Notifications\LowStockAlertNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TransactionService
 {
@@ -179,7 +180,7 @@ class TransactionService
             ->sum('qty');
 
         if ($totalAvailable < $quantityToDeduct) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'item_name' => ["Waduh rek, stok gak cukup. Sisa mung {$totalAvailable} {$inventoryItem->unit}, tapi sampeyan dodol {$quantityToDeduct}."],
             ]);
         }

@@ -283,7 +283,7 @@ class SmartEntryE2ETest extends TestCase
 
         // 4. Verify validation error (Session should have errors)
         $storeResponse->assertSessionHasErrors('item_name');
-        
+
         // Stock should still be 10
         $this->assertEquals(10, $team->inventoryBatches()->where('inventory_item_id', $item->id)->sum('qty'));
     }

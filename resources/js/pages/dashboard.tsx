@@ -25,9 +25,10 @@ interface Props {
     forecast7Days?: ForecastData[];
     forecast30Days?: ForecastData[];
     teamSlug?: string;
+    latestBriefing?: string | null;
 }
 
-export default function Dashboard({ auth, currentBalance = 0, forecast7Days = [], forecast30Days = [], teamSlug }: Props) {
+export default function Dashboard({ auth, currentBalance = 0, forecast7Days = [], forecast30Days = [], teamSlug, latestBriefing }: Props) {
     const [view, setView] = useState<'business' | 'personal'>('business');
 
     // For demo purposes, we'll split the balance. 
@@ -76,10 +77,10 @@ export default function Dashboard({ auth, currentBalance = 0, forecast7Days = []
                             <div>
                                 <div className="flex items-center gap-2 mb-2">
                                     <h3 className="text-xl font-bold tracking-wide">Bisikan Strategis Cak DONE</h3>
-                                    <span className="bg-white/20 text-[10px] uppercase px-2 py-0.5 rounded border border-white/30 backdrop-blur-sm">Prediksi Arus Kas</span>
+                                    <span className="bg-white/20 text-[10px] uppercase px-2 py-0.5 rounded border border-white/30 backdrop-blur-sm">Prediksi Harian</span>
                                 </div>
                                 <p className="text-primary-foreground/90 leading-relaxed text-sm md:text-base font-medium">
-                                    "Bos, Kas hari ini stabil. Tapi hati-hati, <strong className="text-amber-300">Stok Sosis Kanzler</strong> sisa 5 bungkus dan besok expired! Saran saya, buat promo Bundling hari ini untuk mempercepat penjualan sebelum rusak."
+                                    {latestBriefing ? latestBriefing : "Belum ada bisikan strategis hari ini. Sistem AI sedang menganalisa data transaksi Anda..."}
                                 </p>
                             </div>
                         </div>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Head, usePage, useForm } from '@inertiajs/react';
+import { Head, usePage, useForm, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { AudioWaveform } from '@/components/audio-waveform';
 import { cn } from '@/lib/utils';
 import * as ai from '@/routes/ai';
+import chatRoutes from '@/routes/ai/chat';
 import * as catat from '@/routes/catat';
 import * as transactions from '@/routes/transactions';
 import { BreadcrumbItem } from '@/types';
@@ -27,21 +28,29 @@ interface Message {
 interface Props {
     recentTransactions: any[];
     lowStockItems: any[];
+    initialChatHistory?: any[];
 }
 
-export default function Catat({ recentTransactions = [], lowStockItems = [] }: Props) {
+export default function Catat({ recentTransactions = [], lowStockItems = [], initialChatHistory = [] }: Props) {
     const { currentTeam } = usePage().props as any;
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
     
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: '1',
-            type: 'bot',
-            content: 'Halo! Saya asisten AI Bisnis Anda. Ada yang bisa saya bantu catat atau analisis hari ini?',
-            timestamp: new Date(),
-        }
-    ]);
+    const defaultGreeting: Message = {
+        id: '1',
+        type: 'bot',
+        content: 'Halo! Saya asisten AI Bisnis Anda. Ada yang bisa saya bantu catat atau analisis hari ini?',
+        timestamp: new Date(),
+    };
+
+    const parsedHistory = initialChatHistory.map(msg => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+    }));
+
+    const [messages, setMessages] = useState<Message[]>(
+        parsedHistory.length > 0 ? parsedHistory : [defaultGreeting]
+    );
     const [inputText, setInputText] = useState('');
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
@@ -58,6 +67,35 @@ export default function Catat({ recentTransactions = [], lowStockItems = [] }: P
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
+
+    // Save to backend whenever messages change
+    useEffect(() => {
+        if (!mounted || messages.length <= 1) return; // Don't save just the greeting
+
+        const timer = setTimeout(() => {
+            fetch(chatRoutes.save.url(currentTeam.slug), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({ messages })
+            });
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [messages, mounted, currentTeam.slug]);
+
+    const clearChat = () => {
+        if (!confirm('Apakah Anda yakin ingin mereset seluruh riwayat percakapan?')) return;
+        
+        router.post(chatRoutes.clear.url(currentTeam.slug), {}, {
+            onSuccess: () => {
+                setMessages([defaultGreeting]);
+                toast.success('Percakapan berhasil direset.');
+            }
+        });
+    };
 
     useEffect(() => {
         if (isRecording) {
@@ -155,6 +193,7 @@ export default function Catat({ recentTransactions = [], lowStockItems = [] }: P
                         ...result.data,
                         liquidity_warning: result.liquidity_warning,
                         inventory_info: result.inventory_info,
+                        show_summary: result.show_summary,
                     },
                     timestamp: new Date(),
                 };
@@ -178,8 +217,15 @@ export default function Catat({ recentTransactions = [], lowStockItems = [] }: P
                 <div className="flex-1 flex flex-col min-h-[calc(100vh-12rem)] min-w-0">
                     {/* Header */}
                     <div className="flex flex-col gap-1 mb-6">
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">AI Insights</h1>
-                        <p className="text-muted-foreground italic text-sm">Input operasional instan dan analisis strategis via dual-intent engine.</p>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight text-foreground">AI Insights</h1>
+                                <p className="text-muted-foreground italic text-sm">Input operasional instan dan analisis strategis via dual-intent engine.</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={clearChat} className="text-muted-foreground hover:text-destructive shrink-0">
+                                <History className="mr-2 h-4 w-4" /> Reset Chat
+                            </Button>
+                        </div>
                     </div>
 
                     <Card className="flex-1 flex flex-col shadow-sm rounded-2xl border-border bg-card/50 overflow-hidden relative">
@@ -220,7 +266,7 @@ export default function Catat({ recentTransactions = [], lowStockItems = [] }: P
                                             <ConfirmationCard teamSlug={currentTeam.slug} data={msg.data} />
                                         )}
 
-                                        {msg.type === 'bot' && msg.intent === 'QUERY' && msg.data && (
+                                        {msg.type === 'bot' && msg.intent === 'QUERY' && msg.data && msg.data.show_summary && (
                                             <InsightSummaryCard data={msg.data} />
                                         )}
 
@@ -523,19 +569,19 @@ function InsightSummaryCard({ data }: { data: any }) {
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                         <p className="text-[10px] text-muted-foreground uppercase">Total Pemasukan</p>
-                        <p className="text-sm font-black text-emerald-500">Rp {data.total_income.toLocaleString()}</p>
+                        <p className="text-sm font-black text-emerald-500">Rp {(data.totals?.income || 0).toLocaleString()}</p>
                     </div>
                     <div className="space-y-1">
                         <p className="text-[10px] text-muted-foreground uppercase">Total Pengeluaran</p>
-                        <p className="text-sm font-black text-destructive">Rp {data.total_expense.toLocaleString()}</p>
+                        <p className="text-sm font-black text-destructive">Rp {(data.totals?.expense || 0).toLocaleString()}</p>
                     </div>
                     <div className="space-y-1 col-span-2">
                         <p className="text-[10px] text-muted-foreground uppercase">Net Profit / Margin</p>
                         <p className={cn(
                             "text-lg font-black tracking-tighter",
-                            data.net_profit >= 0 ? "text-emerald-500" : "text-destructive"
+                            ((data.totals?.income || 0) - (data.totals?.expense || 0)) >= 0 ? "text-emerald-500" : "text-destructive"
                         )}>
-                            Rp {data.net_profit.toLocaleString()}
+                            Rp {((data.totals?.income || 0) - (data.totals?.expense || 0)).toLocaleString()}
                         </p>
                     </div>
                 </div>

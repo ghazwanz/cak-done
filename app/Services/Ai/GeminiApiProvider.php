@@ -90,8 +90,12 @@ class GeminiApiProvider implements AiProvider
         
         Guidelines:
         - Speak in a helpful, locally-flavored tone (Bahasa Indonesia with slight Suroboyoan character).
-        - Be concise and focus on the data.
-        - Do not hallucinate numbers not in the aggregates.';
+        - If the question is specific (e.g. "What item sold best?"), answer it directly and briefly.
+        - Only provide a broad financial overview if the user asks for a "summary", "report", or "all data".
+        - Keep your response concise (max 2-3 sentences) and focus on the data.
+        - Do not hallucinate numbers not in the aggregates.
+        - IMPORTANT: You are STRICTLY an SME business assistant. If the user asks about general knowledge, politics, government policies (e.g. "pemerintah MBG butuh pasokan berapa?"), or anything completely unrelated to their own business data and operations, you MUST decline politely by saying something like "Sepurane rek, aku iki mung asisten ngurus keuangan ambek stok tokomu tok. Lek soal liyane iku aku ga paham."
+        - If you decline to answer, you MUST start your response with the prefix [REJECT].';
 
         $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}", [
             'contents' => [
@@ -121,30 +125,33 @@ class GeminiApiProvider implements AiProvider
         4. RECURRING DETECTION: 
            - Detect if an expense is a recurring bill (monthly/weekly/daily). 
            - Keywords like "tagihan", "bayar wifi", "listrik", "gaji", "sewa", "langganan" often signify recurring expenses.
+        5. CONTEXT BOUNDARY:
+           - If the input is completely unrelated to business operations or recording a transaction (e.g. asking general questions, politics, government policies, chatting), set `out_of_context` to true.
         
         Return the result in JSON format with the following keys:
+        - out_of_context: (boolean) true if the input is unrelated to a business transaction.
         - transcription: (string) your word-for-word or best-effort transcription of the input
         - item_name: (string) name of the product or expense
         - amount: (integer) total value in Rupiah
         - type: (string) "income" or "expense"
-        - category: (string) "penjualan", "bahan_baku", "operasional", etc.
+        - category: (string) MUST be one of: "penjualan", "bahan_baku", "operasional", "lainnya".
         - is_business: (boolean) true if it's for the business, false if personal
         - is_recurring: (boolean) true if this looks like a regular bill/expense
         - frequency: (string) only if is_recurring is true. Choose: "daily", "weekly", "monthly", "yearly"
         - inventory: (optional object) 
             - IF `type` is "expense" (Buying stock):
                 - quantity: (integer) number of items/kg bought
-                - unit: (string) "kg", "pcs", "liter", etc.
+                - unit: (string) MUST be one of: "pcs", "kg", "gram", "liter", "ml", "pack", "box", "ikat", "lusin".
                 - cogs: (integer) cost per 1 unit
             - IF `type` is "income" (Selling stock):
                 - quantity: (integer) number of items sold
-                - unit: (string) e.g., "kg", "pcs"
+                - unit: (string) MUST be one of: "pcs", "kg", "gram", "liter", "ml", "pack", "box", "ikat", "lusin".
         
         LOGIC FOR SALE (Income):
         If the user says "Jual [Item] [Quantity]", you MUST calculate the `amount` based on context. 
         However, if you are providing the `inventory.quantity` for a sale, its purpose is to let the system know how much to deduct from stock.
         
-        If you are unsure about the category, use the most logical one for a culinary SME.
+        If you are unsure about the category, use "operasional" for general business expenses or "bahan_baku" for kitchen-related purchases.
         PROMPT;
     }
 }

@@ -428,15 +428,15 @@ export function SmartEntry() {
                                             onChange={(e) => setData('inventory', { ...data.inventory, unit: e.target.value })}
                                             className="flex h-8 w-full rounded-md border border-amber-200 dark:border-amber-800 bg-background/50 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                         >
-                                            <option value="pcs">pcs (biji)</option>
-                                            <option value="kg">kg (kilogram)</option>
-                                            <option value="gr">gr (gram)</option>
+                                            <option value="pcs">pcs</option>
+                                            <option value="kg">kg</option>
+                                            <option value="gram">gram</option>
                                             <option value="liter">liter</option>
-                                            <option value="box">box (kotak)</option>
-                                            <option value="porsi">porsi</option>
-                                            <option value="bungkus">bungkus</option>
-                                            <option value="ekor">ekor</option>
+                                            <option value="ml">ml</option>
+                                            <option value="pack">pack</option>
+                                            <option value="box">box</option>
                                             <option value="ikat">ikat</option>
+                                            <option value="lusin">lusin</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1.5 opacity-70">
@@ -465,7 +465,22 @@ export function SmartEntry() {
                             </div>
                             <div className="flex-1">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Kategori</Label>
-                                <div className="mt-1 font-semibold text-foreground capitalize">{data.category.replace('_', ' ')}</div>
+                                <select
+                                    value={data.category}
+                                    onChange={(e) => setData('category', e.target.value)}
+                                    className="mt-1 w-full bg-transparent border-none p-0 font-semibold text-foreground focus:ring-0 cursor-pointer"
+                                >
+                                    {data.type === 'income' ? (
+                                        <option value="penjualan">Penjualan</option>
+                                    ) : (
+                                        <>
+                                            <option value="Bahan Baku">Bahan Baku</option>
+                                            <option value="Operasional">Operasional</option>
+                                            <option value="Kemasan">Kemasan</option>
+                                            <option value="Lainnya">Lainnya</option>
+                                        </>
+                                    )}
+                                </select>
                             </div>
                         </div>
 
