@@ -4,12 +4,12 @@
 **Epic 3** from the PRD focuses on helping UMKM owners avoid liquidity crises by predicting cash shortfalls, separating personal from business expenses, and automatically generating formal financial reports suitable for bank loans (KUR).
 
 ## Acceptance Criteria Checklist
-- [ ] Display a real-time cash balance dashboard on the homepage.
-- [ ] Implement a 7-day and 30-day cash flow forecast view.
-- [ ] Build a pre-purchase liquidity warning triggered before a user confirms a large expense.
-- [ ] Add a tag-based system to separate personal ("Pribadi") and business ("Usaha") funds.
-- [ ] Enable one-tap generation of a bank-compliant PDF report (IAI standard cash flow statement).
-- [ ] Implement AI auto-detection and learning for recurring expenses.
+- [x] Display a real-time cash balance dashboard on the homepage.
+- [x] Implement a 7-day and 30-day cash flow forecast view.
+- [x] Build a pre-purchase liquidity warning triggered before a user confirms a large expense.
+- [x] Add a tag-based system to separate personal ("Pribadi") and business ("Usaha") funds.
+- [x] Enable one-tap generation of a bank-compliant PDF report (IAI standard cash flow statement).
+- [x] Implement AI auto-detection and learning for recurring expenses.
 
 ## Technical Implementation Guide
 

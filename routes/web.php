@@ -18,6 +18,7 @@ Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('catat', [AiController::class, 'catat'])->name('catat.index');
 
         // Transactions (Workflow 1 & 2 Integration)
         Route::post('ai/process', [AiController::class, 'process'])->name('ai.process');

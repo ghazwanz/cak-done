@@ -64,6 +64,9 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Minimize token usage by following the guidelines in [.agents/rules/00-token-efficiency.md](.agents/rules/00-token-efficiency.md).
 - Read only necessary code sections, use specific search queries, and avoid redundant tool calls.
+- Call multiple tools in parallel (except `semantic_search`) when they don't depend on each other.
+- Group related file edits into single turns when possible, but keep them logical and safe.
+- Stop and re-evaluate early instead of exhaustively searching with expensive tools if a path isn't working.
 
 ### UI Distinction & Dual-Intent Architecture
 
@@ -84,7 +87,8 @@ To separate functions cleanly, follow these AI interaction standards:
 ### Database & Aggregator Strategy
 
 - **Transactions Table**: Must retain the `is_business` flag and `raw_input` column to store original multimodal prompts and delineate business logic.
-- **SQL-First Summaries**: The AI must not calculate sums/averages line-by-line. Instead, `AggregatorService.php` must handle SQL DB functions (`SUM`, `AVG`, `COUNT`), returning clean aggregated arrays to the AI for narration.
+- **Efficiency Rules (SQL-First, AI-Second)**: The AI MUST NOT read raw database records row-by-row to answer queries (e.g., calculating profits). AI's primary role is Reasoning (narrative, advice), while the Backend's role is Calculation.
+- **Source of Truth - SQL-First Summaries**: The AI must not calculate sums/averages line-by-line. Instead, `app/Services/Ai/AggregatorService.php` must handle SQL DB functions (`SUM`, `AVG`, `COUNT`), returning clean aggregated arrays to the AI for narration. This drastically cuts token costs and improves accuracy.
 
 === boost rules ===
 
@@ -231,7 +235,8 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 # Inertia + React
 
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
-- **Dark Mode Support**: All new or modified UI components MUST fully support Dark Mode using Tailwind CSS `dark:` utilities. Ensure high contrast and readability in dark themes.
-- **Aesthetic Premium**: Always prioritize a premium look (gradients, smooth transitions, modern typography) as defined in the project vision.
+- **Dark Mode Support**: All new or modified UI components MUST fully support Dark Mode using Tailwind CSS `dark:` utilities. Use existing CSS variables or HSL tokens whenever possible. Ensure text contrast remains readable (minimum `slate-400` or `slate-300` for secondary text).
+- **Aesthetic Premium**: Always prioritize a premium look (vibrant colors, glassmorphism, dynamic animations, modern typography like Inter/Roboto/Outfit). Avoid creating "simple minimum viable products". Implement hover effects and interactive states.
+- **Shadcn UI & Components**: Use Shadcn UI for standard, accessible components. ALWAYS utilize the **shadcn MCP server** tools (e.g., `mcp_shadcn_search_items_in_registries`, `mcp_shadcn_get_add_command_for_items`, `mcp_shadcn_get_item_examples_from_registries`) to discover and install components before building from scratch. Use `mcp_shadcn_get_audit_checklist` after adding new components. No placeholders for images; generate a working demonstration.
 
 </laravel-boost-guidelines>

@@ -9,6 +9,8 @@ use App\Services\CashFlowPredictor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class AiController extends Controller
 {
@@ -17,6 +19,21 @@ class AiController extends Controller
         protected AggregatorService $aggregator,
         protected CashFlowPredictor $cashFlowPredictor
     ) {}
+
+    public function catat(Team $current_team)
+    {
+        return Inertia::render('catat/index', [
+            'recentTransactions' => $current_team->transactions()
+                ->latest()
+                ->take(5)
+                ->get(),
+            'lowStockItems' => $current_team->inventoryItems()
+                ->withSum('batches', 'qty')
+                ->whereRaw('(SELECT COALESCE(SUM(qty), 0) FROM inventory_batches WHERE inventory_item_id = inventory_items.id) <= low_stock_threshold')
+                ->take(5)
+                ->get(),
+        ]);
+    }
 
     /**
      * Dual-Intent Engine: Decides whether to RECORD a transaction or QUERY insights.
@@ -27,7 +44,7 @@ class AiController extends Controller
             'text' => 'nullable|string',
             'audio' => 'nullable|file|mimes:wav,mp3,m4a,ogg,webm',
             'image' => 'nullable|file|mimes:jpg,jpeg,png,webp',
-            'intent_context' => 'nullable|string|in:smart_entry,dashboard',
+            'intent_context' => 'nullable|string|in:smart_entry,dashboard,catat',
         ]);
 
         $text = $request->input('text');

@@ -4,11 +4,11 @@
 **Epic 2** from the PRD focuses on helping UMKM owners track product expiry dates to reduce food waste. It automatically alerts users before stock expires and provides smart markdown recommendations.
 
 ## Acceptance Criteria Checklist
-- [ ] Integrate expiry date extraction during the "Catat" transaction entry or via manual input.
-- [ ] Track inventory batches individually with FIFO auto-sorting.
-- [ ] Build an Inventory screen displaying color-coded statuses (Green: safe, Yellow: <7 days, Red: <3 days, Grey: expired).
+- [x] Integrate expiry date extraction during the "Catat" transaction entry or via manual input.
+- [x] Track inventory batches individually with FIFO auto-sorting.
+- [x] Build an Inventory screen displaying color-coded statuses (Green: safe, Yellow: <7 days, Red: <3 days, Grey: expired).
 - [ ] Implement a push notification system alerting users 3 days (configurable) before an item expires.
-- [ ] Generate AI-based markdown/discount recommendations based on item COGS.
+- [x] Generate AI-based markdown/discount recommendations based on item COGS.
 - [ ] Implement an "Emergency Response Mode" for freezer failures, calculating safe product viability.
 
 ## Technical Implementation Guide

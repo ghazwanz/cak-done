@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Package, ReceiptText } from 'lucide-react';
+import { BookOpen, FileText, FolderGit2, LayoutGrid, Package, ReceiptText, Sparkles } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -19,6 +19,8 @@ import { dashboard } from '@/routes';
 import * as transactions from '@/routes/transactions';
 import type { NavItem } from '@/types';
 import * as inventory from '@/routes/inventory';
+import * as ai from '@/routes/catat';
+import * as reports from '@/routes/reports';
 
 export function AppSidebar() {
     const page = usePage();
@@ -26,6 +28,8 @@ export function AppSidebar() {
     const dashboardUrl = currentTeamSlug ? dashboard.url(currentTeamSlug) : '/';
     const inventoryUrl = currentTeamSlug ? inventory.index.url(currentTeamSlug) : '#';
     const transactionsUrl = currentTeamSlug ? transactions.index.url(currentTeamSlug) : '#';
+    const catatUrl = currentTeamSlug ? ai.index.url(currentTeamSlug) : '#';
+    const cashflowUrl = currentTeamSlug ? reports.cashflow.url(currentTeamSlug) : '#';
 
     const mainNavItems: NavItem[] = [
         {
@@ -37,6 +41,16 @@ export function AppSidebar() {
             title: 'Transaksi',
             href: transactionsUrl,
             icon: ReceiptText,
+        },
+        {
+            title: 'AI Insights',
+            href: catatUrl,
+            icon: Sparkles,
+        },
+        {
+            title: 'Laporan Kas',
+            href: cashflowUrl,
+            icon: FileText,
         },
         {
             title: 'Inventory',

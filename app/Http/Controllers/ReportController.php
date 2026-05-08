@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class ReportController extends Controller
 {
@@ -50,16 +51,26 @@ class ReportController extends Controller
 
         $startingBalance = $pastIncome - $pastExpense;
 
-        $pdf = Pdf::loadView('reports.cashflow', compact(
-            'team',
-            'startDate',
-            'endDate',
-            'operatingIncome',
-            'operatingExpense',
-            'netOperatingCash',
-            'startingBalance'
-        ));
+        $data = [
+            'startDate' => $startDate->toDateString(),
+            'endDate' => $endDate->toDateString(),
+            'operatingIncome' => (int) $operatingIncome,
+            'operatingExpense' => (int) $operatingExpense,
+            'netOperatingCash' => (int) $netOperatingCash,
+            'startingBalance' => (int) $startingBalance,
+            'endingBalance' => (int) ($startingBalance + $netOperatingCash),
+        ];
 
-        return $pdf->download('Laporan_Arus_Kas_'.$team->slug.'.pdf');
+        if ($request->has('pdf')) {
+            $pdf = Pdf::loadView('reports.cashflow', array_merge($data, [
+                'team' => $team,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+            ]));
+
+            return $pdf->download('Laporan_Arus_Kas_'.$team->slug.'.pdf');
+        }
+
+        return Inertia::render('reports/cashflow', $data);
     }
 }

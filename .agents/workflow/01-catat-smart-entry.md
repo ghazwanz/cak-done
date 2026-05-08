@@ -4,14 +4,14 @@
 **Epic 1** from the PRD focuses on allowing UMKM owners to record transactions seamlessly using natural language voice or receipt photo OCR. This reduces the manual entry burden and prevents financial blindness.
 
 ## Acceptance Criteria Checklist
-- [ ] Implement a global "Catat" FAB/bar for immediate access.
-- [ ] Develop live voice-to-text recording: User speaks directly into the microphone (not file upload).
-- [ ] Develop image-to-text (OCR) recording: Capture a photo of a receipt (even if crumpled or low-light).
-- [ ] Integrate Vertex AI (Gemini 2.5 Flash) to parse amount, category, item name, and transaction type.
-- [ ] Automatically categorize transactions following a standard accounting chart.
-- [ ] Present a confirmation screen to the user to review/edit the AI-parsed data.
-- [ ] Store the transaction in PostgreSQL within 5 seconds.
-- [ ] Create a real-time home screen dashboard showing daily income, expenses, and net balance.
+- [x] Implement a global "Catat" FAB/bar for immediate access.
+- [x] Develop live voice-to-text recording: User speaks directly into the microphone (not file upload).
+- [x] Develop image-to-text (OCR) recording: Capture a photo of a receipt (even if crumpled or low-light).
+- [x] Integrate Vertex AI (Gemini 2.5 Flash) to parse amount, category, item name, and transaction type.
+- [x] Automatically categorize transactions following a standard accounting chart.
+- [x] Present a confirmation screen to the user to review/edit the AI-parsed data.
+- [x] Store the transaction in PostgreSQL within 5 seconds.
+- [x] Create a real-time home screen dashboard showing daily income, expenses, and net balance.
 
 ## Technical Implementation Guide
 

@@ -87,7 +87,7 @@ export default function Profile({
                                             <Link
                                                 href={send()}
                                                 as="button"
-                                                className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                                                className="text-foreground underline decoration-muted-foreground/30 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-muted-foreground/50"
                                             >
                                                 Click here to resend the
                                                 verification email.
@@ -96,7 +96,7 @@ export default function Profile({
 
                                         {status ===
                                             'verification-link-sent' && (
-                                            <div className="mt-2 text-sm font-medium text-green-600">
+                                            <div className="mt-2 text-sm font-medium text-emerald-500">
                                                 A new verification link has been
                                                 sent to your email address.
                                             </div>

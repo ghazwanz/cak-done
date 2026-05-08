@@ -5,11 +5,11 @@
 This epic governs **Halaman CATAT & AI Insights**, serving as the dedicated **Hybrid (Write & Read)** dashboard for users.
 
 ## Acceptance Criteria Checklist
-- [ ] Build a conversational chat interface assigned to a dedicated Sidebar Page.
-- [ ] Connect the chat to user-specific transaction and inventory data using the **Dual-Intent Engine**.
-- [ ] Differentiate user input: **Intent RECORD** (saves to DB via Smart Entry logic) vs **Intent QUERY** (answers business questions).
-- [ ] Enable the AI to answer questions in Bahasa Indonesia/Suroboyoan dialect in plain language safely derived from SQL-computed aggregates.
-- [ ] Set up a daily morning briefing notification (e.g., sent at 7:00 AM) summarizing key metrics.
+- [x] Build a conversational chat interface assigned to a dedicated Sidebar Page.
+- [x] Connect the chat to user-specific transaction and inventory data using the **Dual-Intent Engine**.
+- [x] Differentiate user input: **Intent RECORD** (saves to DB via Smart Entry logic) vs **Intent QUERY** (answers business questions).
+- [x] Enable the AI to answer questions in Bahasa Indonesia/Suroboyoan dialect in plain language safely derived from SQL-computed aggregates.
+- [x] Set up a daily morning briefing (displayed on Dashboard as "Bisikan Strategis") summarizing key metrics.
 - [ ] (Optional/Phase 4) Create an aggregate admin/cooperative dashboard.
 
 ## Technical Implementation Guide
