@@ -17,6 +17,7 @@ class SaveTeamRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', new TeamName],
+            'opening_balance' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

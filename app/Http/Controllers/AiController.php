@@ -152,7 +152,7 @@ class AiController extends Controller
 
             if ($itemName) {
                 $inventoryItem = $team->inventoryItems()
-                    ->where('name', 'ILIKE', $itemName)
+                    ->where(DB::raw('LOWER(name)'), 'like', '%'.strtolower($itemName).'%')
                     ->with(['batches' => fn ($q) => $q->where('qty', '>', 0)->orderBy('expiry_date', 'asc')])
                     ->first();
             }
@@ -206,15 +206,62 @@ class AiController extends Controller
 
     protected function handleQueryIntent(string $text, Team $team)
     {
-        // SQL-First: Get clean aggregates instead of raw rows
-        $summary = $this->aggregator->getFinancialSummary($team, now()->startOfMonth()->toDateString(), now()->toDateString());
+        // 1. Detect dynamic date range from text (e.g. "Maret", "Bulan lalu")
+        $startDate = now()->startOfMonth()->toDateString();
+        $endDate = now()->toDateString();
+
+        $months = [
+            'januari' => 1, 'februari' => 2, 'maret' => 3, 'april' => 4, 'mei' => 5, 'juni' => 6,
+            'juli' => 7, 'agustus' => 8, 'september' => 9, 'oktober' => 10, 'november' => 11, 'desember' => 12,
+            'january' => 1, 'february' => 2, 'march' => 3, 'may' => 5, 'june' => 6,
+            'july' => 7, 'august' => 8, 'october' => 10, 'december' => 12,
+        ];
+
+        $lowerText = strtolower($text);
+
+        // Extract year if present (4 digits)
+        $targetYear = now()->year;
+        if (preg_match('/\b(20\d{2})\b/', $text, $matches)) {
+            $targetYear = (int) $matches[1];
+        }
+
+        foreach ($months as $name => $num) {
+            if (str_contains($lowerText, $name)) {
+                $targetDate = now()->setYear($targetYear)->setMonth($num);
+
+                // If no year specified and month is in future, assume last year
+                if (! preg_match('/\b(20\d{2})\b/', $text) && $targetDate->isFuture() && $num > now()->month) {
+                    $targetDate->subYear();
+                }
+
+                $startDate = $targetDate->startOfMonth()->toDateString();
+                $endDate = $targetDate->endOfMonth()->toDateString();
+                break;
+            }
+        }
+
+        if (str_contains($lowerText, 'bulan lalu') || str_contains($lowerText, 'sasi wingi')) {
+            $startDate = now()->subMonth()->startOfMonth()->toDateString();
+            $endDate = now()->subMonth()->endOfMonth()->toDateString();
+        }
+
+        // SQL-First: Get clean aggregates for the detected period
+        $summary = $this->aggregator->getFinancialSummary($team, $startDate, $endDate);
 
         // Add more context for richer AI responses
         $summary['inventory_health'] = $this->aggregator->getInventoryHealth($team);
-        $summary['holiday_predictions'] = $this->aggregator->getUpcomingHolidayPredictions($team);
+        $summary['holiday_predictions'] = $this->aggregator->getUpcomingHolidayPredictions($team, $text);
 
-        // Final Narration by AI using provided aggregates as context
-        $narration = $this->ai->narrateInsights($text, $summary);
+        // Fetch chat history from DB for conversational context
+        $historyData = DB::table('ai_insights')
+            ->where('team_id', $team->id)
+            ->where('type', 'chat_history')
+            ->first();
+
+        $history = $historyData ? json_decode($historyData->data, true) : [];
+
+        // Final Narration by AI using provided aggregates and history as context
+        $narration = $this->ai->narrateInsights($text, $summary, $history);
 
         $isRejected = str_starts_with($narration, '[REJECT]');
         if ($isRejected) {
@@ -242,7 +289,7 @@ class AiController extends Controller
         }
 
         // 2. Deteksi kata tanya (Indonesia/Suroboyoan) dan istilah analitik/kesehatan stok
-        $inquiryPattern = '/\b(apa|opo|berapa|piro|mana|endi|kapan|bagaimana|piye|sebutkan|tampilkan|berikan|info|summary|ringkasan|laporan|statistik|grafik|profit|laba|untung|rugi|kadaluarsa|expired|basi|sisa|stok|paling laku|terlaris|analisis|prediksi)\b/i';
+        $inquiryPattern = '/\b(apa|opo|berapa|piro|mana|endi|kapan|bagaimana|piye|kenapa|kenopo|mengapa|mengapo|kok|kenapa|mengapa|sebutkan|tampilkan|berikan|info|summary|ringkasan|laporan|statistik|grafik|profit|laba|untung|rugi|kadaluarsa|expired|basi|sisa|stok|paling laku|terlaris|analisis|prediksi)\b/i';
 
         return (bool) preg_match($inquiryPattern, $text);
     }

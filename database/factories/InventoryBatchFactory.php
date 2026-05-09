@@ -13,12 +13,11 @@ class InventoryBatchFactory extends Factory
         return [
             'team_id' => Team::factory(),
             'inventory_item_id' => InventoryItem::factory(),
-            'item_name' => $this->faker->randomElement(['Sosis Sapi', 'Ayam Frozen', 'Beras', 'Minyak Goreng']),
-            'qty' => $this->faker->numberBetween(1, 50),
-            'unit' => $this->faker->randomElement(['pcs', 'kg']),
-            'cogs' => $this->faker->numberBetween(5000, 100000), // Harga Pokok
-            // Set expired date antara 2 hari ke belakang sampai 14 hari ke depan
-            'expiry_date' => $this->faker->dateTimeBetween('-2 days', '+14 days')->format('Y-m-d'),
+            'item_name' => $this->faker->word(),
+            'qty' => $this->faker->numberBetween(1, 100),
+            'unit' => $this->faker->randomElement(['pcs', 'kg', 'gram', 'liter', 'ml', 'pack', 'box', 'ikat', 'lusin']),
+            'cogs' => $this->faker->numberBetween(1000, 500000),
+            'expiry_date' => $this->faker->dateTimeBetween('-1 month', '+1 year')->format('Y-m-d'),
         ];
     }
 }

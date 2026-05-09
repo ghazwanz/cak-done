@@ -15,10 +15,11 @@ class CashFlowPredictor
      */
     public function getCurrentBalance(Team $team): float
     {
+        $openingBalance = (float) $team->opening_balance;
         $incomes = $team->transactions()->business()->income()->sum('amount');
         $expenses = $team->transactions()->business()->expense()->sum('amount');
 
-        return (float) ($incomes - $expenses);
+        return $openingBalance + (float) ($incomes - $expenses);
     }
 
     /**
@@ -46,24 +47,14 @@ class CashFlowPredictor
             while ($dueDate <= $endDate) {
                 $projectedExpenses += $expense->amount;
 
-                // Advance date based on frequency
-                switch ($expense->frequency) {
-                    case 'daily':
-                        $dueDate->addDay();
-                        break;
-                    case 'weekly':
-                        $dueDate->addWeek();
-                        break;
-                    case 'monthly':
-                        $dueDate->addMonth();
-                        break;
-                    case 'yearly':
-                        $dueDate->addYear();
-                        break;
-                    default:
-                        // Prevent infinite loop if unexpected frequency
-                        $dueDate = $endDate->copy()->addDay();
-                }
+                // Advance date based on frequency - support both mutable and immutable
+                $dueDate = match ($expense->frequency) {
+                    'daily' => $dueDate->addDay(),
+                    'weekly' => $dueDate->addWeek(),
+                    'monthly' => $dueDate->addMonth(),
+                    'yearly' => $dueDate->addYear(),
+                    default => $endDate->copy()->addDay(),
+                };
             }
         }
 

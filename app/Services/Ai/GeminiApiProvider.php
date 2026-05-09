@@ -82,28 +82,61 @@ class GeminiApiProvider implements AiProvider
         return json_decode($resultText, true) ?? [];
     }
 
-    public function narrateInsights(string $query, array $aggregates): string
+    public function narrateInsights(string $query, array $aggregates, array $history = []): string
     {
-        $prompt = "You are Cak Done, a friendly SME financial assistant in Surabaya.
-        Answer the following business question: \"$query\"
-        Use these SQL-computed aggregates as your ONLY source of truth: ".json_encode($aggregates).'
+        $systemInstructions = 'You are Cak Done, a friendly SME financial assistant in Surabaya.
+        Use these SQL-computed aggregates as your ONLY source of truth for the current state: '.json_encode($aggregates).'
         
         Guidelines:
         - Speak in a helpful, locally-flavored tone (Bahasa Indonesia with slight Suroboyoan character).
+        - If the user asks about drops or growth, prioritize the data in "performance_trend" (this shows actual recent growth vs previous period).
+        - The "holiday_predictions" are ONLY forecasts for FUTURE events. If you mention them, clearly state they are predictions/forecasts (e.g. "Berdasarkan data tahun lalu, pas Idul Adha mengko prediksime...").
+        - Do not confuse a prediction for a future holiday with the current performance trend.
         - If the question is specific (e.g. "What item sold best?"), answer it directly and briefly.
-        - Only provide a broad financial overview if the user asks for a "summary", "report", or "all data".
-        - Keep your response concise (max 2-3 sentences) and focus on the data.
+        - Keep your response concise (max 3-5 sentences) and focus on the data.
         - Do not hallucinate numbers not in the aggregates.
-        - IMPORTANT: You are STRICTLY an SME business assistant. If the user asks about general knowledge, politics, government policies (e.g. "pemerintah MBG butuh pasokan berapa?"), or anything completely unrelated to their own business data and operations, you MUST decline politely by saying something like "Sepurane rek, aku iki mung asisten ngurus keuangan ambek stok tokomu tok. Lek soal liyane iku aku ga paham."
-        - If you decline to answer, you MUST start your response with the prefix [REJECT].';
+        - IMPORTANT: You are STRICTLY an SME business assistant. Decline unrelated topics (politics, general knowledge) politely starting with [REJECT].';
 
-        $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}", [
-            'contents' => [
-                ['parts' => [['text' => $prompt]]],
-            ],
+        $contents = [];
+
+        // Add history
+        foreach ($history as $message) {
+            if (! isset($message['role']) || ! isset($message['content'])) {
+                continue;
+            }
+
+            $role = $message['role'] === 'user' ? 'user' : 'model';
+            $contents[] = [
+                'role' => $role,
+                'parts' => [['text' => $message['content']]],
+            ];
+        }
+
+        // Add current query with system instructions context
+        $contents[] = [
+            'role' => 'user',
+            'parts' => [['text' => "SYSTEM CONTEXT: $systemInstructions\n\nUSER QUESTION: $query"]],
+        ];
+
+        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}", [
+            'contents' => $contents,
         ]);
 
         if ($response->failed()) {
+            Log::error('Gemini API Failure', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'query' => $query,
+            ]);
+
+            if ($response->status() === 429) {
+                return 'Waduh, aku lagi rame banget sing takon rek (Rate Limit). Coba sedilut maneh yo?';
+            }
+
+            if ($response->status() === 500 || $response->status() === 503) {
+                return 'Server Google-e lagi lungkrah rek. Coba maneh sedilut engkas yo?';
+            }
+
             return 'Waduh, maaf rek. Aku lagi gak bisa akses data analitikmu sekarang.';
         }
 

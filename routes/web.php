@@ -14,6 +14,10 @@ Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
 
+Route::get('/dashboard', function () {
+    return redirect()->route('dashboard', ['current_team' => auth()->user()->currentTeam->slug]);
+})->middleware(['auth', 'verified']);
+
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {

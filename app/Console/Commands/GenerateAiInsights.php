@@ -38,7 +38,15 @@ class GenerateAiInsights extends Command
                 }
 
                 // 2. Instruct AI to generate the daily strategic briefing
-                $prompt = "Buatlah satu paragraf singkat 'Bisikan Strategis' untuk pemilik UMKM. Fokus pada peringatan likuiditas, stok, saran operasional, atau persiapan event/hari raya terdekat jika ada di data prediksi. Gunakan data: ".json_encode($summary);
+                $prompt = "Hai Cak Done, tolong gawekno siji paragraf 'Bisikan Strategis' sing mantep nggo pemilik UMKM iki.
+                Fokus nang:
+                - Likuiditas (nek duite mepet).
+                - Stok (nek ono sing entek).
+                - Tren performa (bandingno dino/minggu/bulan iki vs wingi), sesuaikan dengan kebutuhan yang lebih penting.
+                - Persiapan event terdekat (cek holiday_predictions).
+                
+                Gunakan tone Suroboyoan sing akrab tapi pinter. Data lengkap: ".json_encode($summary);
+
                 $narration = $ai->narrateInsights($prompt, $summary);
 
                 // 3. Save to database

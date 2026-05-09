@@ -10,7 +10,7 @@ interface AiProvider
     public function parseTransaction(?string $text = null, ?string $audioPath = null, ?string $imagePath = null): array;
 
     /**
-     * Narrate business insights using aggregated data.
+     * Narrate business insights using aggregated data and chat history.
      */
-    public function narrateInsights(string $query, array $aggregates): string;
+    public function narrateInsights(string $query, array $aggregates, array $history = []): string;
 }
