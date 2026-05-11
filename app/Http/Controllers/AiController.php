@@ -147,14 +147,19 @@ class AiController extends Controller
             $inventoryInfo = null;
             $suggestedPrice = null;
 
+            // SQL-First Item Matching (Workflow 3): Prevent redundancy by fuzzy matching existing items
             $itemName = $parsed['item_name'] ?? null;
-            $inventoryItem = null;
+            $inventoryItem = $this->aggregator->findClosestInventoryItem($team, $itemName);
+            $contextualAdvice = [];
+            $inventoryInfo = null;
 
-            if ($itemName) {
-                $inventoryItem = $team->inventoryItems()
-                    ->where(DB::raw('LOWER(name)'), 'like', '%'.strtolower($itemName).'%')
-                    ->with(['batches' => fn ($q) => $q->where('qty', '>', 0)->orderBy('expiry_date', 'asc')])
-                    ->first();
+            // If match found, correct the name in parsed data to match DB exactly
+            if ($inventoryItem) {
+                $itemName = $inventoryItem->name; // Update local variable for advice logic
+                $parsed['item_name'] = $itemName;
+                $parsed['category'] = $inventoryItem->category ?? $parsed['category'];
+                // Load batches for stock info
+                $inventoryItem->load(['batches' => fn ($q) => $q->where('qty', '>', 0)->orderBy('expiry_date', 'asc')]);
             }
 
             if ($inventoryItem) {
@@ -163,25 +168,82 @@ class AiController extends Controller
                     'item_id' => $inventoryItem->id,
                     'current_qty' => $totalQty,
                     'unit' => $inventoryItem->unit,
+                    'selling_price' => $inventoryItem->selling_price,
                     'threshold' => $inventoryItem->low_stock_threshold,
                 ];
 
-                // Suggest price based on COGS if amount is missing or low
+                // Suggest price based on Master Selling Price or COGS
                 if ($parsed['type'] === 'income' && empty($parsed['amount'])) {
-                    $firstBatch = $inventoryItem->batches->first();
                     $quantityToSell = (float) ($parsed['inventory']['quantity'] ?? 1);
+                    $pricePerUnit = null;
 
-                    if ($firstBatch) {
-                        // Default markup 20% from COGS for suggestion if AI forgot price
-                        $cogs = (float) ($firstBatch->cogs > 0 ? $firstBatch->cogs : 10000); // Fallback to 10k if COGS is 0
-                        $suggestedPrice = round($cogs * $quantityToSell * 1.2);
+                    if ($inventoryItem->selling_price > 0) {
+                        $pricePerUnit = (float) $inventoryItem->selling_price;
+                    } else {
+                        // Fallback to COGS + 20% if master selling price is not set
+                        $firstBatch = $inventoryItem->batches->first();
+                        $cogs = (float) ($firstBatch && $firstBatch->cogs > 0 ? $firstBatch->cogs : 10000);
+                        $pricePerUnit = round($cogs * 1.2);
+                    }
 
+                    if ($pricePerUnit) {
+                        $suggestedPrice = $pricePerUnit * $quantityToSell;
                         $parsed['amount'] = (int) $suggestedPrice;
-                        $parsed['inventory']['quantity'] = $quantityToSell; // Ensure quantity is set for deduction
-                        $parsed['transcription'] = ($parsed['transcription'] ?? '').' (Harga disesuaikan otomatis dari modal: Rp '.number_format($parsed['amount'], 0, ',', '.').')';
+                        $parsed['inventory']['quantity'] = $quantityToSell;
+                        $parsed['transcription'] = ($parsed['transcription'] ?? '').' (Harga otomatis: Rp '.number_format($parsed['amount'], 0, ',', '.').')';
                     }
                 }
             }
+
+            // 1. Recent Trends (Last 7 days growth) - PRIORITAS UTAMA
+            $trendAdvice = $this->aggregator->getRecentTrendAdvice($team, $itemName);
+            if ($trendAdvice) {
+                $contextualAdvice[] = $trendAdvice;
+            }
+
+            // 2. Consumption vs Stock (Presisi Stok)
+            $proposedQty = (float) ($parsed['inventory']['quantity'] ?? 0);
+            $consumptionAdvice = $this->aggregator->getConsumptionAdvice($team, $itemName, $proposedQty);
+            if ($consumptionAdvice) {
+                $contextualAdvice[] = $consumptionAdvice;
+            }
+
+            // 3. Weekly Patterns (Day of week spike)
+            $weeklyAdvice = $this->aggregator->getWeeklyPatternAdvice($team, $itemName);
+            if ($weeklyAdvice) {
+                $contextualAdvice[] = $weeklyAdvice;
+            }
+
+            // 4. Holiday Predictions
+            $holidayPrediction = $this->aggregator->getUpcomingHolidayAlerts();
+            foreach ($holidayPrediction as $holiday) {
+                if ($itemName && str_contains(strtolower($itemName), strtolower($holiday['name']))) {
+                    $contextualAdvice[] = 'ℹ️ **Event**: '.$holiday['message'];
+                }
+            }
+
+            // 5. Fallback/Summary Advice
+            if (empty($contextualAdvice) && $inventoryInfo) {
+                $contextualAdvice[] = "💡 **Cek Stok**: Saat ini ada {$inventoryInfo['current_qty']} {$inventoryInfo['unit']} di gudang. Kamu sedang menambah {$proposedQty} {$inventoryInfo['unit']}.";
+            }
+
+            $finalAdvice = implode("\n\n", array_unique($contextualAdvice));
+
+            // PROACTIVE: Detect Price Hike (Margin Alert) for Expenses
+            $priceAlert = null;
+            if ($parsed['type'] === 'expense' && ($parsed['is_business'] ?? false) && $itemName) {
+                $priceRate = (float) ($parsed['amount'] / max(($parsed['inventory']['quantity'] ?? 1), 1));
+                $priceAlert = $this->aggregator->detectPriceHikeAlert($team, $itemName, $priceRate);
+            }
+
+            // 6. Routine Detection (Check against recurring expenses)
+            $isRoutine = $team->recurringExpenses()
+                ->where('is_active', true)
+                ->where(function ($query) use ($itemName) {
+                    $query->whereRaw('LOWER(name) LIKE ?', ['%'.strtolower($itemName ?? '').'%'])
+                        ->orWhereRaw('? LIKE LOWER(\'%\' || name || \'%\')', [strtolower($itemName ?? '')]);
+                })
+                ->exists();
 
             return response()->json([
                 'intent' => 'RECORD',
@@ -189,6 +251,9 @@ class AiController extends Controller
                 'data' => $parsed,
                 'liquidity_warning' => $liquidityWarning,
                 'inventory_info' => $inventoryInfo,
+                'contextual_advice' => $finalAdvice,
+                'price_alert' => $priceAlert,
+                'is_routine' => $isRoutine,
                 'message' => 'Silakan konfirmasi data transaksi di bawah ini.',
             ]);
         } catch (\Exception $e) {
@@ -206,9 +271,30 @@ class AiController extends Controller
 
     protected function handleQueryIntent(string $text, Team $team)
     {
-        // 1. Detect dynamic date range from text (e.g. "Maret", "Bulan lalu")
+        // 1. Detect dynamic date range from text (e.g. "Maret", "Bulan lalu", "Setahun")
         $startDate = now()->startOfMonth()->toDateString();
         $endDate = now()->toDateString();
+
+        $lowerText = strtolower($text);
+
+        // Yearly context
+        if (str_contains($lowerText, 'setahun') || str_contains($lowerText, 'tahun ini')) {
+            $startDate = now()->startOfYear()->toDateString();
+            $endDate = now()->toDateString();
+        } elseif (str_contains($lowerText, 'tahun lalu') || str_contains($lowerText, 'tahun wingi')) {
+            $startDate = now()->subYear()->startOfYear()->toDateString();
+            $endDate = now()->subYear()->endOfYear()->toDateString();
+        }
+        // Monthly context
+        elseif (str_contains($lowerText, 'bulan lalu') || str_contains($lowerText, 'sasi wingi')) {
+            $startDate = now()->subMonth()->startOfMonth()->toDateString();
+            $endDate = now()->subMonth()->endOfMonth()->toDateString();
+        }
+        // Weekly context
+        elseif (str_contains($lowerText, 'minggu ini') || str_contains($lowerText, 'pekan ini')) {
+            $startDate = now()->startOfWeek()->toDateString();
+            $endDate = now()->toDateString();
+        }
 
         $months = [
             'januari' => 1, 'februari' => 2, 'maret' => 3, 'april' => 4, 'mei' => 5, 'juni' => 6,
@@ -216,8 +302,6 @@ class AiController extends Controller
             'january' => 1, 'february' => 2, 'march' => 3, 'may' => 5, 'june' => 6,
             'july' => 7, 'august' => 8, 'october' => 10, 'december' => 12,
         ];
-
-        $lowerText = strtolower($text);
 
         // Extract year if present (4 digits)
         $targetYear = now()->year;
@@ -238,11 +322,6 @@ class AiController extends Controller
                 $endDate = $targetDate->endOfMonth()->toDateString();
                 break;
             }
-        }
-
-        if (str_contains($lowerText, 'bulan lalu') || str_contains($lowerText, 'sasi wingi')) {
-            $startDate = now()->subMonth()->startOfMonth()->toDateString();
-            $endDate = now()->subMonth()->endOfMonth()->toDateString();
         }
 
         // SQL-First: Get clean aggregates for the detected period

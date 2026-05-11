@@ -23,7 +23,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, Mic, Image as ImageIcon, Send, Loader2, Check, X, Square } from 'lucide-react';
+import { Sparkles, Mic, Image as ImageIcon, Send, Loader2, Check, X, Square, AlertTriangle, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { AudioWaveform } from './audio-waveform';
 
@@ -42,6 +42,8 @@ interface ParsedData {
         unit: string;
         threshold: number;
     } | null;
+    contextual_advice?: string | null;
+    price_alert?: string | null;
 }
 
 export function SmartEntry() {
@@ -53,10 +55,28 @@ export function SmartEntry() {
     const [inputText, setInputText] = useState('');
     const [parsedData, setParsedData] = useState<ParsedData | null>(null);
     const [recordingTime, setRecordingTime] = useState(0);
-
+    const [isRoutine, setIsRoutine] = useState(false);
+    const [countdown, setCountdown] = useState<number | null>(null);
+    const [showAnalysis, setShowAnalysis] = useState(false);
+    const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (countdown !== null && countdown > 0) {
+            countdownIntervalRef.current = setTimeout(() => {
+                setCountdown(prev => (prev !== null ? prev - 1 : null));
+            }, 1000);
+        } else if (countdown === 0) {
+            handleSubmit();
+            setCountdown(null);
+        }
+        return () => {
+            if (countdownIntervalRef.current) clearTimeout(countdownIntervalRef.current);
+        };
+    }, [countdown]);
+
 
     useEffect(() => {
         if (isRecording) {
@@ -134,8 +154,9 @@ export function SmartEntry() {
         raw_input: '',
         inventory: {
             quantity: 0,
-            unit: '',
-            expiry_days: 0,
+            unit: 'pcs',
+            expiry_days: 7,
+            expiry_date: '',
             cogs: 0,
         } as any,
     });
@@ -166,7 +187,14 @@ export function SmartEntry() {
                     ...result.data,
                     liquidity_warning: result.liquidity_warning,
                     inventory_info: result.inventory_info,
+                    contextual_advice: result.contextual_advice,
+                    price_alert: result.price_alert,
                 });
+                setIsRoutine(!!result.is_routine);
+                if (result.is_routine) {
+                    setCountdown(5);
+                    toast.info('Transaksi rutin terdeteksi. Menyimpan otomatis dalam 5 detik...');
+                }
                 setData({
                     item_name: result.data.item_name || '',
                     amount: result.data.amount || 0,
@@ -178,15 +206,19 @@ export function SmartEntry() {
                     raw_input: result.data.transcription || (mode === 'text' ? inputText : `Multimodal (${mode})`),
                     inventory: result.data.inventory ? {
                         quantity: result.data.inventory.quantity || 0,
-                        unit: result.data.inventory.unit || '',
-                        expiry_days: result.data.inventory.expiry_days || 0,
+                        unit: result.data.inventory.unit || 'pcs',
+                        expiry_days: result.data.inventory.expiry_days || 7,
+                        expiry_date: result.data.inventory.expiry_date || '',
                         cogs: result.data.inventory.cogs || (result.data.inventory.quantity > 0 ? Math.round(result.data.amount / result.data.inventory.quantity) : 0),
                     } : null,
                 });
                 if (result.inventory_info) {
-                    toast.info(`Info Stok: ${result.inventory_info.current_qty} ${result.inventory_info.unit} tersedia.`);
+                    toast.success(`Berhasil! Stok "${result.data.item_name}" saiki sisa ${result.inventory_info.current_qty} ${result.inventory_info.unit}.`, {
+                        description: `Data ${mode} berhasil dianalisis.`,
+                    });
+                } else {
+                    toast.success('Berhasil menganalisis ' + mode + '!');
                 }
-                toast.success('Berhasil menganalisis ' + mode + '!');
             } else {
                 toast.error(result.message || 'Gagal menganalisis.');
             }
@@ -197,9 +229,13 @@ export function SmartEntry() {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         
+        // Stop any active auto-confirm countdown
+        if (countdownIntervalRef.current) clearTimeout(countdownIntervalRef.current);
+        setCountdown(null);
+
         // Show warning if it exists and we haven't accepted it yet
         if (parsedData?.liquidity_warning && !warningOpen) {
             setWarningOpen(true);
@@ -217,6 +253,7 @@ export function SmartEntry() {
                 reset();
                 setInputText('');
                 setParsedData(null);
+                setIsRoutine(false);
                 toast.success('Transaksi berhasil disimpan!');
             },
             onError: (errors) => {
@@ -243,19 +280,16 @@ export function SmartEntry() {
                     <Sparkles className="h-6 w-6 text-white group-hover:animate-pulse" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] border-none shadow-2xl bg-card glass">
+            <DialogContent className="sm:max-w-[600px] border-none shadow-2xl bg-card glass">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
                         <Sparkles className="h-6 w-6 text-primary" />
-                        Log Cepat (Write-Only)
+                        CATAT
                     </DialogTitle>
-                    <DialogDescription className="text-muted-foreground italic">
-                        Input operasional instan. Untuk analisis data, silakan gunakan menu Dashboard.
-                    </DialogDescription>
                 </DialogHeader>
 
                 {!parsedData ? (
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-4 py-2">
                         {isRecording && (
                             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 backdrop-blur-xl animate-in fade-in duration-300">
                                 <div className="text-center space-y-8 p-8 w-full max-w-md">
@@ -357,13 +391,87 @@ export function SmartEntry() {
                         </Button>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6 py-4">
+                    <form onSubmit={handleSubmit} className="space-y-3">
                         <div className="p-3 bg-accent rounded-xl border border-border">
                             <Label className="text-[10px] uppercase font-bold text-primary">Hasil Transkripsi AI</Label>
                             <p className="text-sm italic text-foreground/80 ml-1">
                                 "{data.raw_input}"
                             </p>
                         </div>
+
+                        {(parsedData.contextual_advice || parsedData.price_alert) && (
+                            <div className="space-y-3">
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className={`w-full h-9 rounded-xl border-2 transition-all flex items-center justify-between px-4 ${
+                                                parsedData.price_alert 
+                                                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 animate-pulse' 
+                                                    : 'bg-indigo-500/5 border-indigo-500/10 text-indigo-600'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Sparkles className={`h-4 w-4 ${parsedData.price_alert ? 'animate-bounce' : ''}`} />
+                                                <span className="text-xs font-bold uppercase tracking-tight">💡 Lihat Analisa Bisnis</span>
+                                            </div>
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-[425px] rounded-3xl border-2 border-primary/20 shadow-2xl">
+                                        <DialogHeader>
+                                            <DialogTitle className="flex items-center gap-2 text-primary">
+                                                <Sparkles className="h-5 w-5" />
+                                                Analisa Bisnis Pintar
+                                            </DialogTitle>
+                                            <DialogDescription>
+                                                Wawasan otomatis dari Cak Done berdasarkan data historis Anda.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="space-y-4 py-4">
+                                            {parsedData.contextual_advice && (
+                                                <div className="p-4 bg-indigo-500/10 border-2 border-indigo-500/30 rounded-2xl">
+                                                    <div className="flex items-start gap-4">
+                                                        <div className="bg-indigo-500 p-2 rounded-lg shadow-md shrink-0">
+                                                            <Sparkles className="h-5 w-5 text-white" />
+                                                        </div>
+                                                        <div className="text-sm text-foreground leading-relaxed">
+                                                            <div className="font-bold text-indigo-600 dark:text-indigo-400 mb-1">Rekomendasi</div>
+                                                            {parsedData.contextual_advice.split('\n').map((line, i) => (
+                                                                <p key={i} className={line.startsWith('**') ? 'font-bold' : ''}>
+                                                                    {line.replace(/\*\*/g, '')}
+                                                                </p>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {parsedData.price_alert && (
+                                                <div className="p-4 bg-amber-500/10 border-2 border-amber-500/30 rounded-2xl shadow-lg">
+                                                    <div className="flex items-start gap-4">
+                                                        <div className="bg-amber-500 p-2 rounded-lg shadow-md shrink-0">
+                                                            <AlertTriangle className="h-5 w-5 text-white" />
+                                                        </div>
+                                                        <div className="text-sm text-foreground leading-relaxed">
+                                                            <div className="font-bold text-amber-600 dark:text-amber-400 mb-1 uppercase tracking-wider">Peringatan Margin</div>
+                                                            <p>{parsedData.price_alert.replace(/\*\*/g, '')}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <DialogFooter>
+                                            <Button type="button" onClick={(e) => {
+                                                // Dialog will close by default since it's inside DialogContent
+                                            }} className="w-full rounded-xl bg-primary">Saya Paham, Lanjutkan</Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -446,12 +554,12 @@ export function SmartEntry() {
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <Label className="text-[10px] text-amber-800 dark:text-amber-500 font-bold">EXPIRED (HARI)</Label>
+                                        <Label className="text-[10px] text-amber-800 dark:text-amber-500 font-bold uppercase tracking-tight">KEDALUWARSA (EXP)</Label>
                                         <Input
-                                            type="number"
-                                            value={data.inventory.expiry_days}
-                                            onChange={(e) => setData('inventory', { ...data.inventory, expiry_days: parseInt(e.target.value) })}
-                                            className="h-8 text-sm bg-background/50 border-amber-200 dark:border-amber-800"
+                                            type="date"
+                                            value={data.inventory.expiry_date || ''}
+                                            onChange={(e) => setData('inventory', { ...data.inventory, expiry_date: e.target.value })}
+                                            className="h-8 text-[11px] bg-background/50 border-amber-200 dark:border-amber-800 font-medium"
                                         />
                                     </div>
                                 </div>
@@ -484,28 +592,78 @@ export function SmartEntry() {
                             </div>
                         </div>
 
-                        <DialogFooter className="gap-2 sm:gap-0">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setParsedData(null)}
-                                className="flex-1 rounded-xl"
-                            >
-                                <X className="mr-2 h-4 w-4" />
-                                Ulangi
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={processing}
-                                className="flex-1 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold glow-primary transition-all"
-                            >
-                                {processing ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Check className="mr-2 h-4 w-4" />
-                                )}
-                                Simpan Transaksi
-                            </Button>
+                        <DialogFooter className="gap-2 sm:gap-0 flex flex-col sm:flex-row items-center w-full">
+                            {countdown !== null && (
+                                <div className="flex-1 flex items-center gap-2 mb-2 sm:mb-0 w-full sm:w-auto">
+                                    <div className="relative h-10 w-10 flex items-center justify-center">
+                                        <svg className="h-full w-full rotate-[-90deg]">
+                                            <circle
+                                                cx="20"
+                                                cy="20"
+                                                r="16"
+                                                fill="transparent"
+                                                stroke="currentColor"
+                                                strokeWidth="4"
+                                                className="text-primary/20"
+                                            />
+                                            <circle
+                                                cx="20"
+                                                cy="20"
+                                                r="16"
+                                                fill="transparent"
+                                                stroke="currentColor"
+                                                strokeWidth="4"
+                                                strokeDasharray="100"
+                                                strokeDashoffset={100 - (countdown / 5) * 100}
+                                                className="text-primary transition-all duration-1000"
+                                            />
+                                        </svg>
+                                        <span className="absolute text-xs font-bold">{countdown}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold uppercase text-primary leading-tight">Auto-Confirm Aktif</span>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-6 px-2 text-[9px] font-black uppercase text-destructive hover:bg-destructive/10"
+                                            onClick={() => setCountdown(null)}
+                                        >
+                                            Batalkan
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex gap-2 w-full sm:w-auto justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setParsedData(null);
+                                        setCountdown(null);
+                                    }}
+                                    disabled={processing}
+                                    className="rounded-xl"
+                                >
+                                    Ulangi Scan
+                                </Button>
+                                <Button 
+                                    type="submit" 
+                                    disabled={processing}
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-8 shadow-lg shadow-primary/20 transition-all active:scale-95"
+                                >
+                                    {processing ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Menyimpan...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check className="mr-2 h-4 w-4" />
+                                            Simpan Transaksi
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
                         </DialogFooter>
                     </form>
                 )}

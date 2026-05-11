@@ -147,14 +147,20 @@ class TransactionService
         }
 
         // 2. Create the specific batch
+        $expiryDate = isset($inventory['expiry_date'])
+            ? Carbon::parse($inventory['expiry_date'])
+            : now()->addDays($inventory['expiry_days'] ?? 7);
+
+        $cogs = round($inventory['cogs'] ?? ($validated['amount'] / ($inventory['quantity'] ?? 1)), 2);
+
         $team->inventoryBatches()->create([
             'inventory_item_id' => $inventoryItem->id,
             'team_id' => $team->id,
-            'item_name' => $validated['item_name'],
+            'item_name' => $inventoryItem->name,
             'qty' => $inventory['quantity'] ?? 1,
-            'unit' => $inventory['unit'] ?? 'pcs',
-            'cogs' => round($inventory['cogs'] ?? ($validated['amount'] / ($inventory['quantity'] ?? 1)), 2),
-            'expiry_date' => now()->addDays($inventory['expiry_days'] ?? 7),
+            'unit' => $inventoryItem->unit,
+            'cogs' => $cogs,
+            'expiry_date' => $expiryDate,
         ]);
     }
 

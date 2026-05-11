@@ -6,7 +6,7 @@ import { FormEvent, useState } from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Wallet, ArrowDown, ArrowUp, FileText, ChartLine, Clock, ChevronRight } from 'lucide-react';
+import { Wallet, ArrowDown, ArrowUp, FileText, ChartLine, Clock, ChevronRight, Calendar, Sparkles, AlertCircle } from 'lucide-react';
 
 interface CashFlowData {
     date: string;
@@ -45,6 +45,13 @@ interface Props {
         expense: number;
         count: number;
     };
+    proactiveAlerts?: Array<{
+        name?: string;
+        day?: string;
+        message?: string;
+        days_to?: number;
+        type?: string;
+    }>;
 }
 
 export default function Dashboard({ 
@@ -56,7 +63,8 @@ export default function Dashboard({
     latestBriefing,
     watchdog = { lowStockCount: 0, expiredCount: 0, alerts: [] },
     recentTransactions = [],
-    monthlyTotals = { income: 0, expense: 0, count: 0 }
+    monthlyTotals = { income: 0, expense: 0, count: 0 },
+    proactiveAlerts = []
 }: Props) {
     const [view, setView] = useState<'business' | 'personal'>('business');
 
@@ -121,6 +129,40 @@ export default function Dashboard({
                             </div>
                         </div>
                     </div>
+
+                    {proactiveAlerts.length > 0 && (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-primary" />
+                                <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Antisipasi Bisnis</h3>
+                            </div>
+                            <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide">
+                                {proactiveAlerts.map((alert, idx) => (
+                                    <div 
+                                        key={idx} 
+                                        className="min-w-[280px] md:min-w-[320px] p-4 rounded-2xl bg-card border-2 border-primary/10 shadow-sm flex flex-col gap-3 group hover:border-primary/30 transition-all cursor-default"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="bg-primary/10 p-2 rounded-xl text-primary group-hover:scale-110 transition-transform">
+                                                {alert.name ? <Calendar className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
+                                            </div>
+                                            {alert.days_to !== undefined && (
+                                                <span className="text-[10px] font-black uppercase px-2 py-1 bg-amber-500/10 text-amber-600 rounded-lg">
+                                                    H-{alert.days_to}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-foreground text-sm mb-1">{alert.name || (alert.day ? `Pola Hari ${alert.day}` : 'Peringatan Bisnis')}</h4>
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                {alert.message || alert.advice || (alert.type === 'income' ? 'Hari ini biasanya ramai pemasukan!' : 'Hati-hati pengeluaran membengkak.')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <Card className="rounded-2xl shadow-sm border-border bg-card">

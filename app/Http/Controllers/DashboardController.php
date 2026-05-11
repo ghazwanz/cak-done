@@ -34,6 +34,11 @@ class DashboardController extends Controller
             now()->endOfDay()->toDateTimeString()
         );
 
+        $proactiveAlerts = array_merge(
+            $aggregator->getUpcomingHolidayAlerts(),
+            $aggregator->getWeeklyPatternInsights($team)
+        );
+
         $latestBriefing = DB::table('ai_insights')
             ->where('team_id', $team->id)
             ->where('type', 'daily_summary')
@@ -46,6 +51,7 @@ class DashboardController extends Controller
             'period' => $period,
             'teamSlug' => $team->slug,
             'latestBriefing' => $latestBriefing ? $latestBriefing->reasoning : null,
+            'proactiveAlerts' => $proactiveAlerts,
             'watchdog' => [
                 'lowStockCount' => $inventoryHealth['nearing_expiry'] ?? 0,
                 'expiredCount' => $inventoryHealth['expired'] ?? 0,

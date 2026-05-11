@@ -15,6 +15,7 @@ class InventoryService
     {
         return $team->inventoryBatches()
             ->with('inventoryItem')
+            ->where('qty', '>', 0)
             ->orderBy('expiry_date', 'asc')
             ->get();
     }
@@ -37,7 +38,7 @@ class InventoryService
      */
     public function getInventoryItems(Team $team): Collection
     {
-        return $team->inventoryItems()->orderBy('name')->get();
+        return $team->inventoryItems()->with('batches')->orderBy('name')->get();
     }
 
     /**
@@ -74,6 +75,16 @@ class InventoryService
     public function updateBatchQty(Team $team, int $batchId, int $newQty): void
     {
         $team->inventoryBatches()->where('id', $batchId)->update(['qty' => $newQty]);
+    }
+
+    /**
+     * Delete all expired batches for a team.
+     */
+    public function deleteExpiredBatches(Team $team): void
+    {
+        $team->inventoryBatches()
+            ->where('expiry_date', '<', now()->toDateString())
+            ->delete();
     }
 
     /**

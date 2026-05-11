@@ -38,6 +38,7 @@ Route::prefix('{current_team}')
         Route::post('inventory/items', [InventoryController::class, 'storeItem'])->name('inventory.items.store');
         Route::patch('inventory/items/{id}', [InventoryController::class, 'updateItem'])->name('inventory.items.update');
         Route::delete('inventory/items/{id}', [InventoryController::class, 'destroyItem'])->name('inventory.items.destroy');
+        Route::post('inventory/clear-expired', [InventoryController::class, 'clearExpired'])->name('inventory.clear-expired');
         Route::patch('inventory/{id}', [InventoryController::class, 'update'])->name('inventory.update');
         Route::delete('inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
 

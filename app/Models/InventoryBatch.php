@@ -13,6 +13,18 @@ class InventoryBatch extends Model
 
     protected $guarded = [];
 
+    protected static function booted(): void
+    {
+        static::saved(function (InventoryBatch $batch) {
+            // Automatically update the master item's selling price whenever a new batch is saved
+            if ($batch->inventoryItem && $batch->cogs > 0) {
+                $batch->inventoryItem->update([
+                    'selling_price' => round($batch->cogs * 1.2),
+                ]);
+            }
+        });
+    }
+
     public function team()
     {
         return $this->belongsTo(Team::class);

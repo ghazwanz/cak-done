@@ -2,12 +2,73 @@
 
 namespace App\Services\Ai;
 
+use App\Models\InventoryItem;
 use App\Models\Team;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AggregatorService
 {
+    /**
+     * Find the closest matching inventory item to prevent redundancy due to typos.
+     */
+    public function findClosestInventoryItem(Team $team, ?string $itemName): ?InventoryItem
+    {
+        if (! $itemName) {
+            return null;
+        }
+
+        $itemName = strtolower(trim($itemName));
+
+        // 1. Try exact match first (Case-insensitive)
+        $exactMatch = $team->inventoryItems()
+            ->whereRaw('LOWER(name) = ?', [$itemName])
+            ->first();
+
+        if ($exactMatch) {
+            return $exactMatch;
+        }
+
+        // 2. Try LIKE match
+        $likeMatch = $team->inventoryItems()
+            ->whereRaw('LOWER(name) LIKE ?', ["%{$itemName}%"])
+            ->first();
+
+        if ($likeMatch) {
+            return $likeMatch;
+        }
+
+        // 3. Try reverse LIKE (if database item name is inside user input)
+        $reverseLikeMatch = $team->inventoryItems()
+            ->whereRaw('? LIKE CONCAT(\'%\', LOWER(name), \'%\')', [$itemName])
+            ->first();
+
+        if ($reverseLikeMatch) {
+            return $reverseLikeMatch;
+        }
+
+        // 4. PHP Fuzzy Match (Levenshtein) for typos like "singong" vs "singkong"
+        $allItems = $team->inventoryItems()->select('id', 'name')->get();
+        $bestMatch = null;
+        $shortestDistance = -1;
+
+        foreach ($allItems as $item) {
+            $distance = levenshtein($itemName, strtolower($item->name));
+
+            // Allow up to 3 character difference for a match
+            if ($distance <= 3 && ($shortestDistance === -1 || $distance < $shortestDistance)) {
+                $bestMatch = $item;
+                $shortestDistance = $distance;
+            }
+        }
+
+        if ($bestMatch) {
+            return $team->inventoryItems()->find($bestMatch->id);
+        }
+
+        return null;
+    }
+
     /**
      * Get a summary of financial performance for a team within a date range.
      */
@@ -25,20 +86,28 @@ class AggregatorService
             ->whereBetween('created_at', [$startDate, $endDate])
             ->sum('amount');
 
+        $currentExpense = (float) $team->transactions()
+            ->where('type', 'expense')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->sum('amount');
+
         $prevIncome = (float) $team->transactions()
             ->where('type', 'income')
             ->whereBetween('created_at', [$prevStart, $prevEnd])
             ->sum('amount');
 
-        $growth = 0;
-        if ($prevIncome > 0) {
-            $growth = (($currentIncome - $prevIncome) / $prevIncome) * 100;
-        }
+        $growth = $prevIncome > 0 ? (($currentIncome - $prevIncome) / $prevIncome) * 100 : 0;
+        $profit = $currentIncome - $currentExpense;
+        $margin = $currentIncome > 0 ? ($profit / $currentIncome) * 100 : 0;
+
+        // Calculate current liquidity (Cash on Hand)
+        $cashOnHand = $this->getCurrentBalance($team);
 
         return [
             'period' => [
                 'start' => $startDate,
                 'end' => $endDate,
+                'label' => $start->translatedFormat('F Y'),
             ],
             'performance_trend' => [
                 'income_growth_percent' => round($growth, 2),
@@ -49,11 +118,11 @@ class AggregatorService
             ],
             'totals' => [
                 'income' => $currentIncome,
-                'expense' => (float) $team->transactions()
-                    ->where('type', 'expense')
-                    ->whereBetween('created_at', [$startDate, $endDate])
-                    ->sum('amount'),
-                'count' => $team->transactions()
+                'expense' => $currentExpense,
+                'profit' => $profit,
+                'net_margin_percent' => round($margin, 2),
+                'cash_on_hand' => $cashOnHand,
+                'transaction_count' => $team->transactions()
                     ->whereBetween('created_at', [$startDate, $endDate])
                     ->count(),
             ],
@@ -317,5 +386,251 @@ class AggregatorService
             ?->total ?? 0;
 
         return $openingBalance + (float) $totalDiff;
+    }
+
+    /**
+     * Analyze recent sales trend (last 7 days vs previous 7 days)
+     */
+    public function getRecentTrendAdvice(Team $team, ?string $itemName): ?string
+    {
+        if (! $itemName) {
+            return null;
+        }
+
+        $last7Days = $team->transactions()
+            ->where('type', 'income')
+            ->where('is_business', true)
+            ->where(DB::raw('LOWER(item_name)'), 'like', '%'.strtolower($itemName).'%')
+            ->whereBetween('created_at', [now()->subDays(7), now()])
+            ->count();
+
+        $prev7Days = $team->transactions()
+            ->where('type', 'income')
+            ->where('is_business', true)
+            ->where(DB::raw('LOWER(item_name)'), 'like', '%'.strtolower($itemName).'%')
+            ->whereBetween('created_at', [now()->subDays(14), now()->subDays(8)])
+            ->count();
+
+        if ($last7Days > $prev7Days) {
+            $growth = $prev7Days > 0 ? round((($last7Days / $prev7Days) - 1) * 100) : 100;
+            $msg = $prev7Days > 0
+                ? "🔥 **Tren Meningkat**: Penjualan $itemName naik $growth% dalam seminggu terakhir."
+                : "🔥 **Tren Baru**: $itemName mulai banyak dicari pelanggan minggu ini!";
+
+            return "$msg Stoknya perlu ditambah biar nggak kehabisan rek!";
+        }
+
+        return null;
+    }
+
+    /**
+     * Analyze weekly patterns to see if today/tomorrow is a high volume day for a specific item.
+     */
+    public function getWeeklyPatternAdvice(Team $team, ?string $itemName): ?string
+    {
+        if (! $itemName) {
+            return null;
+        }
+
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
+        $dayOfWeekRaw = $isSqlite ? "strftime('%w', created_at)" : 'extract(dow from created_at)';
+
+        $stats = DB::table('transactions')
+            ->where('team_id', $team->id)
+            ->where('type', 'income')
+            ->where('is_business', true)
+            ->where(DB::raw('LOWER(item_name)'), 'like', '%'.strtolower($itemName).'%')
+            ->where('created_at', '>=', now()->subDays(60))
+            ->select(
+                DB::raw("$dayOfWeekRaw as dow"),
+                DB::raw('COUNT(*) as sales_count')
+            )
+            ->groupBy('dow')
+            ->get();
+
+        if ($stats->isEmpty()) {
+            return null;
+        }
+
+        $avgSales = $stats->avg('sales_count');
+        $tomorrowDow = now()->addDay()->dayOfWeek;
+        $tomorrowStats = $stats->firstWhere('dow', $tomorrowDow);
+
+        if ($tomorrowStats && $tomorrowStats->sales_count > ($avgSales * 1.3)) {
+            $days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+            return "📅 **Pola Mingguan**: Biasane dino {$days[$tomorrowDow]} iku rame pesenan $itemName. Ojo lali nyiapno bahan luwih akeh ket mau bengi!";
+        }
+
+        return null;
+    }
+
+    /**
+     * Get proactive alerts for upcoming national holidays.
+     */
+    public function getUpcomingHolidayAlerts(): array
+    {
+        $holidays = [
+            ['date' => '2026-05-24', 'name' => 'Hari Raya Idul Adha', 'advice' => 'Stok daging dan bumbu sate biasanya naik drastis!'],
+            ['date' => '2026-06-01', 'name' => 'Hari Lahir Pancasila', 'advice' => 'Libur panjang, biasanya pesanan kuliner meningkat.'],
+            ['date' => '2026-08-17', 'name' => 'Hari Kemerdekaan RI', 'advice' => 'Banyak lomba dan hajatan, pesanan nasi kotak biasanya melonjak.'],
+        ];
+
+        $alerts = [];
+        foreach ($holidays as $h) {
+            $daysTo = now()->diffInDays(Carbon::parse($h['date']), false);
+            if ($daysTo >= 0 && $daysTo <= 10) {
+                $alerts[] = [
+                    'name' => $h['name'],
+                    'days_to' => $daysTo,
+                    'advice' => $h['advice'],
+                    'message' => "H-{$daysTo} {$h['name']}: {$h['advice']}",
+                ];
+            }
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Analyze if the current stock + proposed purchase is enough for average weekly consumption.
+     */
+    public function getConsumptionAdvice(Team $team, ?string $itemName, float $proposedQty = 0): ?string
+    {
+        if (! $itemName) {
+            return null;
+        }
+
+        // Cari barang dengan pencocokan lebih fleksibel (paling mendekati)
+        $inventoryItem = $team->inventoryItems()
+            ->where(function ($query) use ($itemName) {
+                $query->whereRaw('LOWER(name) LIKE ?', ['%'.strtolower($itemName).'%'])
+                    ->orWhereRaw('? LIKE LOWER(\'%\' || name || \'%\')', [strtolower($itemName)]);
+            })
+            ->first();
+
+        if (! $inventoryItem) {
+            return null;
+        }
+
+        $currentStock = (float) $inventoryItem->batches()->sum('qty');
+        $totalStockAfterBuy = $currentStock + $proposedQty;
+
+        // Hitung rata-rata penjualan mingguan (data 30 hari terakhir)
+        $salesLast30Days = $team->transactions()
+            ->where('type', 'income')
+            ->where('is_business', true)
+            ->where(function ($query) use ($itemName, $inventoryItem) {
+                $query->whereRaw('LOWER(item_name) LIKE ?', ['%'.strtolower($itemName).'%'])
+                    ->orWhere('item_name', $inventoryItem->name);
+            })
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+
+        // LOGIKA: Jika belum ada data penjualan, minimal sarankan beli sampai di atas threshold
+        if ($salesLast30Days === 0) {
+            $minSafe = max($inventoryItem->low_stock_threshold, 5); // Default minimal 5 jika threshold 0
+            if ($totalStockAfterBuy < $minSafe) {
+                $suggested = $minSafe - $totalStockAfterBuy;
+
+                return "💡 **Saran Stok**: Barang baru ini belum ada riwayat penjualan. Tapi stokmu cuma {$totalStockAfterBuy}, mending stok sisan {$minSafe} biar aman!";
+            }
+
+            return null;
+        }
+
+        $avgWeeklySales = ($salesLast30Days / 30) * 7;
+        // Berikan saran jika stok setelah beli < kebutuhan 1.5 minggu (agar ada cadangan)
+        $targetStock = ceil($avgWeeklySales * 1.5);
+
+        if ($totalStockAfterBuy < $targetStock) {
+            $needed = $targetStock - $totalStockAfterBuy;
+
+            return '💡 **Saran Presisi**: Biasanya kamu butuh sekitar '.ceil($avgWeeklySales)." {$inventoryItem->unit} per minggu. Stokmu saiki cuma {$totalStockAfterBuy}. Disarankan tambah {$needed} {$inventoryItem->unit} lagi biar aman seminggu ke depan.";
+        }
+
+        return null;
+    }
+
+    /**
+     * Calculate the current liquidity of a team.
+     */
+    /**
+     * Detect if the current purchase price is higher than historical average.
+     */
+    public function detectPriceHikeAlert(Team $team, string $itemName, float $currentPrice): ?string
+    {
+        // Langsung cari rata-rata COGS (harga modal per unit) dari batch sebelumnya
+        $avgPrice = $team->inventoryBatches()
+            ->where('item_name', $itemName)
+            ->where('created_at', '>=', now()->subMonths(3))
+            ->avg('cogs');
+
+        if (! $avgPrice) {
+            return null;
+        }
+
+        $avgPrice = (float) $avgPrice;
+
+        if ($avgPrice > 0 && $currentPrice > ($avgPrice * 1.1)) {
+            $increase = (($currentPrice - $avgPrice) / $avgPrice) * 100;
+
+            return sprintf(
+                '⚠️ **Margin Alert**: Harga satuan "%s" mundak %.1f%% dibanding biasane (saiki Rp %s, biasane Rp %s). Marginmu dadi tipis, opo rego jual perlu disesuaikan?',
+                $itemName,
+                $increase,
+                number_format($currentPrice, 0, ',', '.'),
+                number_format($avgPrice, 0, ',', '.')
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Analyze weekly patterns to predict busy days.
+     */
+    public function getWeeklyPatternInsights(Team $team): array
+    {
+        $data = $team->transactions()
+            ->where('created_at', '>=', now()->subDays(28))
+            ->select(
+                DB::raw('EXTRACT(DOW FROM created_at) as dow'),
+                DB::raw('SUM(amount) as total_amount'),
+                DB::raw('COUNT(*) as count'),
+                'type'
+            )
+            ->groupBy('dow', 'type')
+            ->get();
+
+        $days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        $busyDays = [];
+
+        foreach ($data as $row) {
+            // If revenue on this day of week is 30% higher than average daily revenue
+            $avgDaily = $team->transactions()
+                ->where('type', $row->type)
+                ->where('created_at', '>=', now()->subDays(28))
+                ->sum('amount') / 28;
+
+            if ($row->total_amount > ($avgDaily * 1.3)) {
+                $busyDays[] = [
+                    'day' => $days[$row->dow],
+                    'type' => $row->type,
+                    'is_today' => now()->dayOfWeek == $row->dow,
+                    'is_tomorrow' => now()->addDay()->dayOfWeek == $row->dow,
+                ];
+            }
+        }
+
+        return $busyDays;
+    }
+
+    public function getCurrentBalance(Team $team): float
+    {
+        $income = (float) $team->transactions()->where('type', 'income')->sum('amount');
+        $expense = (float) $team->transactions()->where('type', 'expense')->sum('amount');
+
+        return (float) ($team->opening_balance ?? 0) + $income - $expense;
     }
 }

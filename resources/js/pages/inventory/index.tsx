@@ -47,7 +47,9 @@ interface InventoryItem {
     name: string;
     category: string;
     unit: string;
+    selling_price: string | number | null;
     low_stock_threshold: number;
+    batches: Batch[];
     created_at: string;
 }
 
@@ -77,7 +79,7 @@ const UNITS = ['pcs', 'kg', 'gram', 'liter', 'ml', 'pack', 'box', 'ikat', 'lusin
 
 export default function InventoryIndex({ batches, lowStockItems, inventoryItems }: Props) {
     const { currentTeam } = usePage().props as any;
-    const isOwner = currentTeam?.role === 'owner';
+    const isAuthorized = currentTeam?.role === 'owner' || currentTeam?.role === 'admin';
 
     // Batch Management State
     const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
@@ -95,6 +97,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
         name: '',
         category: '',
         unit: '',
+        selling_price: 0,
         low_stock_threshold: 10,
         initial_qty: 0,
         initial_cogs: 0,
@@ -117,23 +120,31 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
     // Batch Handlers
     const handleUpdateBatchQty = () => {
         if (!editingBatch) return;
-        router.patch(inventory.update.url(currentTeam.slug, editingBatch.id), {
+        router.patch(inventory.update.url([currentTeam.slug, editingBatch.id]), {
             qty: parseInt(editQty),
         }, {
             onSuccess: () => {
                 setEditingBatch(null);
                 toast.success('Stok batch diperbarui.');
+            },
+            onError: (errors) => {
+                console.error('Update batch error:', errors);
+                toast.error('Gagal memperbarui stok.');
             }
         });
     };
 
     const handleDeleteBatch = () => {
         if (batchToDelete === null) return;
-        router.delete(inventory.destroy.url(currentTeam.slug, batchToDelete), {
+        router.delete(inventory.destroy.url([currentTeam.slug, batchToDelete]), {
             onSuccess: () => {
                 setIsBatchDeleteDialogOpen(false);
                 setBatchToDelete(null);
                 toast.success('Batch dihapus.');
+            },
+            onError: (errors) => {
+                console.error('Delete batch error:', errors);
+                toast.error('Gagal menghapus batch.');
             }
         });
     };
@@ -152,7 +163,8 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
         itemForm.setData({
             name: item.name,
             category: item.category || '',
-            unit: item.unit || '',
+            unit: item.unit,
+            selling_price: item.selling_price || 0,
             low_stock_threshold: item.low_stock_threshold,
             initial_qty: 0,
             initial_cogs: 0,
@@ -177,7 +189,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
         };
 
         if (editingItem) {
-            itemForm.patch(inventory.items.update.url(currentTeam.slug, editingItem.id), options);
+            itemForm.patch(inventory.items.update.url([currentTeam.slug, editingItem.id]), options);
         } else {
             itemForm.post(inventory.items.store.url(currentTeam.slug), options);
         }
@@ -185,11 +197,15 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
 
     const handleDeleteItem = () => {
         if (itemToDelete === null) return;
-        router.delete(inventory.items.destroy.url(currentTeam.slug, itemToDelete), {
+        router.delete(inventory.items.destroy.url([currentTeam.slug, itemToDelete]), {
             onSuccess: () => {
                 setIsItemDeleteDialogOpen(false);
                 setItemToDelete(null);
                 toast.success('Barang dan stok terkait dihapus.');
+            },
+            onError: (errors) => {
+                console.error('Delete item error:', errors);
+                toast.error('Gagal menghapus barang.');
             }
         });
     };
@@ -227,7 +243,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                         <h1 className="text-3xl font-bold tracking-tight text-foreground">Inventory</h1>
                         <p className="text-muted-foreground italic">Pantau stok barang dan tanggal kadaluarsa secara otomatis.</p>
                     </div>
-                    {isOwner && (
+                    {isAuthorized && (
                         <Button onClick={openAddItem} className="rounded-full shadow-lg glow-primary">
                             <Plus className="mr-2 h-4 w-4" /> Tambah Barang Baru
                         </Button>
@@ -359,10 +375,9 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                             <TableRow className="border-border bg-muted/30">
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Barang</TableHead>
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Jumlah</TableHead>
-                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Tgl Kadaluarsa</TableHead>
-                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Status</TableHead>
-                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-right">Modal (COGS)</TableHead>
-                                                {isOwner && (
+                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">Tgl Kadaluarsa</TableHead>
+                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">Status</TableHead>
+                                                {isAuthorized && (
                                                     <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center w-[80px]">Aksi</TableHead>
                                                 )}
                                             </TableRow>
@@ -370,7 +385,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                         <TableBody>
                                             {batches.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={isOwner ? 6 : 5} className="text-center py-24 text-muted-foreground italic">
+                                                    <TableCell colSpan={isAuthorized ? 6 : 5} className="text-center py-24 text-muted-foreground italic">
                                                         <div className="flex flex-col items-center gap-4">
                                                             <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center text-3xl">
                                                                 📦
@@ -394,10 +409,10 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                                         <TableCell className="py-4 px-6 text-muted-foreground">
                                                             <span className="font-black text-foreground">{batch.qty}</span> {batch.unit}
                                                         </TableCell>
-                                                        <TableCell className="py-4 px-6 text-muted-foreground font-mono text-[11px]">
+                                                        <TableCell className="py-4 px-6 text-center text-muted-foreground font-mono text-[11px]">
                                                             {new Date(batch.expiry_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                                                         </TableCell>
-                                                        <TableCell className="py-4 px-6">
+                                                        <TableCell className="py-4 px-6 text-center">
                                                             <Badge
                                                                 variant={getStatusVariant(batch.expiry_date) as any}
                                                                 className="rounded-full px-3 py-0.5 text-[10px] font-black uppercase tracking-tighter"
@@ -405,10 +420,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                                                 {getStatusLabel(batch.expiry_date)}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="py-4 px-6 text-right font-black text-foreground text-sm">
-                                                            Rp {parseFloat(batch.cogs).toLocaleString('id-ID')}
-                                                        </TableCell>
-                                                        {isOwner && (
+                                                        {isAuthorized && (
                                                             <TableCell className="py-4 px-6 text-center">
                                                                 <DropdownMenu>
                                                                     <DropdownMenuTrigger asChild>
@@ -471,16 +483,18 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Nama Barang</TableHead>
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Kategori</TableHead>
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Unit</TableHead>
-                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">Minimum Stok</TableHead>
-                                                {isOwner && (
-                                                    <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center w-[120px]">Aksi</TableHead>
+                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">Stok Saat Ini</TableHead>
+                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-right">Modal (Avg)</TableHead>
+                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-right">Harga Jual</TableHead>
+                                                {isAuthorized && (
+                                                    <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center w-[100px]">Aksi</TableHead>
                                                 )}
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {inventoryItems.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={isOwner ? 5 : 4} className="text-center py-24 text-muted-foreground italic">
+                                                    <TableCell colSpan={isAuthorized ? 7 : 6} className="text-center py-24 text-muted-foreground italic">
                                                         Belum ada definisi barang. Tambahkan barang baru untuk mulai mengelola stok.
                                                     </TableCell>
                                                 </TableRow>
@@ -495,9 +509,17 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                                         </TableCell>
                                                         <TableCell className="py-4 px-6 font-medium text-muted-foreground">{item.unit}</TableCell>
                                                         <TableCell className="py-4 px-6 text-center font-black text-foreground">
-                                                            {item.low_stock_threshold}
+                                                            {item.batches?.reduce((sum, b) => sum + b.qty, 0) || 0} {item.unit}
                                                         </TableCell>
-                                                        {isOwner && (
+                                                        <TableCell className="py-4 px-6 text-right font-bold text-muted-foreground">
+                                                            Rp {item.batches && item.batches.length > 0 
+                                                                ? Math.round(item.batches.reduce((sum, b) => sum + parseFloat(b.cogs), 0) / item.batches.length).toLocaleString('id-ID')
+                                                                : '0'}
+                                                        </TableCell>
+                                                        <TableCell className="py-4 px-6 text-right font-black text-primary">
+                                                            Rp {parseFloat(item.selling_price as string || '0').toLocaleString('id-ID')}
+                                                        </TableCell>
+                                                        {isAuthorized && (
                                                             <TableCell className="py-4 px-6">
                                                                 <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEditItem(item)}>
@@ -618,7 +640,17 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Batas Stok Minimum</Label>
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Harga Jual (Rp)</Label>
+                                        <Input 
+                                            type="number"
+                                            className="h-11 rounded-xl bg-muted/50 border-border focus:ring-primary font-bold text-primary" 
+                                            value={itemForm.data.selling_price}
+                                            onChange={e => itemForm.setData('selling_price', e.target.value)}
+                                            placeholder="Contoh: 15000"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Batas Minimum Stok</Label>
                                         <Input 
                                             type="number"
                                             className="h-11 rounded-xl bg-muted/50 border-border focus:ring-primary font-black" 
