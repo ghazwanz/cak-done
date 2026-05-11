@@ -306,7 +306,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                     </Card>
                 </div>
 
-                <Tabs defaultValue="stock" className="space-y-6">
+                <Tabs defaultValue="items" className="space-y-6">
                     <div className="flex items-center justify-between">
                         <TabsList className="bg-muted/50 p-1 rounded-xl">
                             <TabsTrigger value="stock" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-6">
@@ -482,7 +482,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                             <TableRow className="border-border bg-muted/30">
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Nama Barang</TableHead>
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Kategori</TableHead>
-                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Unit</TableHead>
+                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">Min. Stok</TableHead>
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">Stok Saat Ini</TableHead>
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-right">Modal (Avg)</TableHead>
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-right">Harga Jual</TableHead>
@@ -507,9 +507,16 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                                                 {item.category || 'N/A'}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="py-4 px-6 font-medium text-muted-foreground">{item.unit}</TableCell>
-                                                        <TableCell className="py-4 px-6 text-center font-black text-foreground">
-                                                            {item.batches?.reduce((sum, b) => sum + b.qty, 0) || 0} {item.unit}
+                                                        <TableCell className="py-4 px-6 text-center font-bold text-muted-foreground">{item.low_stock_threshold}</TableCell>
+                                                        <TableCell className="py-4 px-6 text-center">
+                                                            <div className="flex flex-col items-center">
+                                                                <span className={`font-black ${item.batches?.reduce((sum, b) => sum + b.qty, 0) <= item.low_stock_threshold ? 'text-rose-500' : 'text-foreground'}`}>
+                                                                    {item.batches?.reduce((sum, b) => sum + b.qty, 0) || 0} {item.unit}
+                                                                </span>
+                                                                {item.batches?.reduce((sum, b) => sum + b.qty, 0) <= item.low_stock_threshold && (
+                                                                    <Badge variant="destructive" className="mt-1 text-[8px] h-4 px-1 font-black leading-none uppercase">Kritis</Badge>
+                                                                )}
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="py-4 px-6 text-right font-bold text-muted-foreground">
                                                             Rp {item.batches && item.batches.length > 0 
