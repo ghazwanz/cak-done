@@ -1,5 +1,6 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
+    "name": "cak-done",
     "private": true,
     "type": "module",
     "scripts": {

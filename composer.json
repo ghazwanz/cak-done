@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "ghazwanz/cak-done",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
     "keywords": [
@@ -72,6 +72,14 @@
             "@php artisan config:clear --ansi",
             "@lint:check",
             "@php artisan test"
+        ],
+        "deploy:prepare": [
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan view:cache"
+        ],
+        "deploy:migrate": [
+            "@php artisan migrate --force"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
