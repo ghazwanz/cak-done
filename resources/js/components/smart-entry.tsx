@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
 import { useForm, usePage } from '@inertiajs/react';
+import { Sparkles, Mic, Image as ImageIcon, Send, Loader2, Check, X, Square, AlertTriangle, ChevronRight } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -23,12 +25,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, Mic, Image as ImageIcon, Send, Loader2, Check, X, Square, AlertTriangle, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
-import { AudioWaveform } from './audio-waveform';
-
 import * as ai from '@/routes/ai';
 import * as transactions from '@/routes/transactions';
+import { AudioWaveform } from './audio-waveform';
+
 
 interface ParsedData {
     item_name: string;
@@ -72,8 +72,11 @@ export function SmartEntry() {
             handleSubmit();
             setCountdown(null);
         }
+
         return () => {
-            if (countdownIntervalRef.current) clearTimeout(countdownIntervalRef.current);
+            if (countdownIntervalRef.current) {
+clearTimeout(countdownIntervalRef.current);
+}
         };
     }, [countdown]);
 
@@ -84,17 +87,24 @@ export function SmartEntry() {
                 setRecordingTime(prev => prev + 1);
             }, 1000);
         } else {
-            if (timerRef.current) clearInterval(timerRef.current);
+            if (timerRef.current) {
+clearInterval(timerRef.current);
+}
+
             setRecordingTime(0);
         }
+
         return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
+            if (timerRef.current) {
+clearInterval(timerRef.current);
+}
         };
     }, [isRecording]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
+
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
@@ -138,6 +148,7 @@ export function SmartEntry() {
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, mode: 'audio' | 'image') => {
         const file = e.target.files?.[0];
+
         if (file) {
             handleParse(file, mode);
         }
@@ -162,13 +173,25 @@ export function SmartEntry() {
     });
 
     const handleParse = async (file?: File, mode: 'audio' | 'image' | 'text' = 'text') => {
-        if (mode === 'text' && !inputText.trim()) return;
+        if (mode === 'text' && !inputText.trim()) {
+return;
+}
 
         setParsing(true);
         const formData = new FormData();
-        if (mode === 'text') formData.append('text', inputText);
-        if (mode === 'audio' && file) formData.append('audio', file);
-        if (mode === 'image' && file) formData.append('image', file);
+
+        if (mode === 'text') {
+formData.append('text', inputText);
+}
+
+        if (mode === 'audio' && file) {
+formData.append('audio', file);
+}
+
+        if (mode === 'image' && file) {
+formData.append('image', file);
+}
+
         formData.append('intent_context', 'smart_entry');
 
         try {
@@ -191,10 +214,12 @@ export function SmartEntry() {
                     price_alert: result.price_alert,
                 });
                 setIsRoutine(!!result.is_routine);
+
                 if (result.is_routine) {
                     setCountdown(5);
                     toast.info('Transaksi rutin terdeteksi. Menyimpan otomatis dalam 5 detik...');
                 }
+
                 setData({
                     item_name: result.data.item_name || '',
                     amount: result.data.amount || 0,
@@ -212,6 +237,7 @@ export function SmartEntry() {
                         cogs: result.data.inventory.cogs || (result.data.inventory.quantity > 0 ? Math.round(result.data.amount / result.data.inventory.quantity) : 0),
                     } : null,
                 });
+
                 if (result.inventory_info) {
                     toast.success(`Berhasil! Stok "${result.data.item_name}" saiki sisa ${result.inventory_info.current_qty} ${result.inventory_info.unit}.`, {
                         description: `Data ${mode} berhasil dianalisis.`,
@@ -230,15 +256,21 @@ export function SmartEntry() {
     };
 
     const handleSubmit = (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+        if (e) {
+e.preventDefault();
+}
         
         // Stop any active auto-confirm countdown
-        if (countdownIntervalRef.current) clearTimeout(countdownIntervalRef.current);
+        if (countdownIntervalRef.current) {
+clearTimeout(countdownIntervalRef.current);
+}
+
         setCountdown(null);
 
         // Show warning if it exists and we haven't accepted it yet
         if (parsedData?.liquidity_warning && !warningOpen) {
             setWarningOpen(true);
+
             return; // Stop here, the user needs to confirm on the warning dialog
         }
 

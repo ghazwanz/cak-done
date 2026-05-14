@@ -1,23 +1,13 @@
 import { Head, usePage, router, useForm } from '@inertiajs/react';
 import { formatDistanceToNow, isBefore, addDays, parseISO } from 'date-fns';
 import { MoreHorizontal, Package, Trash2, Edit, AlertTriangle, ArrowUpCircle, Plus, Settings2, Tag, Layers, Coins, Calendar } from 'lucide-react';
+import { ThermometerSnowflake } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { EmergencyModal } from '@/components/emergency-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import {
     Dialog,
     DialogContent,
@@ -26,9 +16,14 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Select,
     SelectContent,
@@ -36,11 +31,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
 import inventory from '@/routes/inventory';
-import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import type { BreadcrumbItem } from '@/types';
 
 interface InventoryItem {
     id: number;
@@ -49,6 +51,7 @@ interface InventoryItem {
     unit: string;
     selling_price: string | number | null;
     low_stock_threshold: number;
+    storage_type?: string;
     batches: Batch[];
     created_at: string;
 }
@@ -92,6 +95,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
     const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
     const [isItemDeleteDialogOpen, setIsItemDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+    const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
 
     const itemForm = useForm({
         name: '',
@@ -99,6 +103,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
         unit: '',
         selling_price: 0,
         low_stock_threshold: 10,
+        storage_type: 'room_temp',
         initial_qty: 0,
         initial_cogs: 0,
         initial_expiry: new Date(addDays(new Date(), 180)).toISOString().split('T')[0],
@@ -107,6 +112,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
     const expiredCount = batches.filter((b) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+
         return isBefore(parseISO(b.expiry_date), today);
     }).length;
 
@@ -114,12 +120,16 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const expiry = parseISO(b.expiry_date);
+
         return !isBefore(expiry, today) && isBefore(expiry, addDays(today, 7));
     }).length;
 
     // Batch Handlers
     const handleUpdateBatchQty = () => {
-        if (!editingBatch) return;
+        if (!editingBatch) {
+return;
+}
+
         router.patch(inventory.update.url([currentTeam.slug, editingBatch.id]), {
             qty: parseInt(editQty),
         }, {
@@ -135,7 +145,10 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
     };
 
     const handleDeleteBatch = () => {
-        if (batchToDelete === null) return;
+        if (batchToDelete === null) {
+return;
+}
+
         router.delete(inventory.destroy.url([currentTeam.slug, batchToDelete]), {
             onSuccess: () => {
                 setIsBatchDeleteDialogOpen(false);
@@ -166,6 +179,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
             unit: item.unit,
             selling_price: item.selling_price || 0,
             low_stock_threshold: item.low_stock_threshold,
+            storage_type: item.storage_type || 'room_temp',
             initial_qty: 0,
             initial_cogs: 0,
             initial_expiry: '',
@@ -196,7 +210,10 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
     };
 
     const handleDeleteItem = () => {
-        if (itemToDelete === null) return;
+        if (itemToDelete === null) {
+return;
+}
+
         router.delete(inventory.items.destroy.url([currentTeam.slug, itemToDelete]), {
             onSuccess: () => {
                 setIsItemDeleteDialogOpen(false);
@@ -216,9 +233,18 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
         const expiry = parseISO(expiryDate);
         expiry.setHours(0, 0, 0, 0);
 
-        if (isBefore(expiry, today)) return 'destructive';
-        if (isBefore(expiry, addDays(today, 3))) return 'destructive';
-        if (isBefore(expiry, addDays(today, 7))) return 'warning';
+        if (isBefore(expiry, today)) {
+return 'destructive';
+}
+
+        if (isBefore(expiry, addDays(today, 3))) {
+return 'destructive';
+}
+
+        if (isBefore(expiry, addDays(today, 7))) {
+return 'warning';
+}
+
         return 'secondary';
     };
 
@@ -228,7 +254,10 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
         const expiry = parseISO(expiryDate);
         expiry.setHours(0, 0, 0, 0);
 
-        if (isBefore(expiry, today)) return 'Expired';
+        if (isBefore(expiry, today)) {
+return 'Expired';
+}
+
         return `${formatDistanceToNow(expiry, { addSuffix: false })} left`;
     };
 
@@ -236,17 +265,26 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
         <>
             <Head title="Inventory — Cak DONE" />
 
-            <div className="flex flex-col gap-6 p-4 md:p-8">
+            <div className="flex flex-col gap-6 p-4">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex flex-col gap-1">
                         <h1 className="text-3xl font-bold tracking-tight text-foreground">Inventory</h1>
-                        <p className="text-muted-foreground italic">Pantau stok barang dan tanggal kadaluarsa secara otomatis.</p>
+                        <p className="text-muted-foreground italic">Pantau stok barang dan tanggal kedaluwarsa secara otomatis.</p>
                     </div>
                     {isAuthorized && (
-                        <Button onClick={openAddItem} className="rounded-full shadow-lg glow-primary">
-                            <Plus className="mr-2 h-4 w-4" /> Tambah Barang Baru
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="destructive" 
+                                onClick={() => setIsEmergencyModalOpen(true)} 
+                                className="rounded-full shadow-lg glow-destructive"
+                            >
+                                <ThermometerSnowflake className="mr-2 h-4 w-4" /> Mode Darurat
+                            </Button>
+                            <Button onClick={openAddItem} className="rounded-full shadow-lg glow-primary">
+                                <Plus className="mr-2 h-4 w-4" /> Tambah Barang Baru
+                            </Button>
+                        </div>
                     )}
                 </div>
 
@@ -332,6 +370,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {lowStockItems.map(item => {
                                             const currentStock = item.batches.reduce((sum, b) => sum + b.qty, 0);
+
                                             return (
                                                 <div key={item.id} className="flex flex-col p-4 rounded-2xl bg-background border border-border shadow-sm hover:shadow-md transition-shadow">
                                                     <div className="flex justify-between items-start mb-3">
@@ -365,7 +404,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                             <CardHeader className="border-b border-border px-6 py-4">
                                 <CardTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
                                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    Pemantauan Batch & Kadaluarsa
+                                    Pemantauan Batch & Kedaluwarsa
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-0">
@@ -375,7 +414,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                             <TableRow className="border-border bg-muted/30">
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Barang</TableHead>
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Jumlah</TableHead>
-                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">Tgl Kadaluarsa</TableHead>
+                                                <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">Tgl Kedaluwarsa</TableHead>
                                                 <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center">Status</TableHead>
                                                 {isAuthorized && (
                                                     <TableHead className="py-4 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground text-center w-[80px]">Aksi</TableHead>
@@ -657,6 +696,23 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                                         />
                                     </div>
                                     <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Tipe Penyimpanan</Label>
+                                        <Select 
+                                            value={itemForm.data.storage_type} 
+                                            onValueChange={val => itemForm.setData('storage_type', val)}
+                                        >
+                                            <SelectTrigger className="h-11 rounded-xl bg-muted/50 border-border font-bold">
+                                                <SelectValue placeholder="Pilih Penyimpanan" />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl border-border">
+                                                <SelectItem value="room_temp">Suhu Ruangan</SelectItem>
+                                                <SelectItem value="chiller">Chiller (Dingin)</SelectItem>
+                                                <SelectItem value="freezer">Freezer (Beku)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-[10px] text-muted-foreground italic">Penting untuk analisis Mode Darurat.</p>
+                                    </div>
+                                    <div className="space-y-2">
                                         <Label className="text-[10px] font-black uppercase text-muted-foreground">Batas Minimum Stok</Label>
                                         <Input 
                                             type="number"
@@ -704,7 +760,7 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
 
                                         <div className="space-y-2">
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
-                                                <Calendar className="h-3 w-3" /> Tanggal Kadaluarsa
+                                                <Calendar className="h-3 w-3" /> Tanggal Kedaluwarsa
                                             </Label>
                                             <Input 
                                                 type="date"
@@ -762,6 +818,12 @@ export default function InventoryIndex({ batches, lowStockItems, inventoryItems 
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+
+                <EmergencyModal 
+                    open={isEmergencyModalOpen} 
+                    onOpenChange={setIsEmergencyModalOpen} 
+                    teamSlug={currentTeam.slug}
+                />
             </div>
         </>
     );

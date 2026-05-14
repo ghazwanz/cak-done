@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FileDown, Calendar, ArrowUpRight, ArrowDownRight, Wallet, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import * as reports from '@/routes/reports';
-import { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
+import * as reports from '@/routes/reports';
+import type { BreadcrumbItem } from '@/types';
 
 interface Props {
     startDate: string;
@@ -35,7 +35,10 @@ export default function CashflowReport({
     }, []);
 
     const formatCurrency = (amount: number) => {
-        if (!mounted) return 'Rp ...';
+        if (!mounted) {
+return 'Rp ...';
+}
+
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
@@ -47,7 +50,7 @@ export default function CashflowReport({
         <>
             <Head title="Laporan Arus Kas" />
 
-            <div className="flex flex-col gap-6 p-4 md:p-8">
+            <div className="flex flex-col gap-6 p-4">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>

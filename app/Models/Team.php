@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'slug', 'is_personal', 'opening_balance'])]
+#[Fillable(['name', 'slug', 'is_personal', 'opening_balance', 'expiry_threshold_days', 'notification_time'])]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
@@ -91,6 +91,8 @@ class Team extends Model
         return [
             'is_personal' => 'boolean',
             'opening_balance' => 'integer',
+            'expiry_threshold_days' => 'integer',
+            'notification_time' => 'string',
         ];
     }
 

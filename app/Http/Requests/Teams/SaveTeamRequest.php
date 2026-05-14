@@ -18,6 +18,8 @@ class SaveTeamRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', new TeamName],
             'opening_balance' => ['nullable', 'numeric', 'min:0'],
+            'expiry_threshold_days' => ['nullable', 'integer', 'min:1'],
+            'notification_time' => ['nullable', 'string', 'regex:/^[0-9]{2}:[0-9]{2}$/'],
         ];
     }
 }

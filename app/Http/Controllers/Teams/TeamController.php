@@ -56,6 +56,8 @@ class TeamController extends Controller
                 'slug' => $team->slug,
                 'isPersonal' => $team->is_personal,
                 'opening_balance' => $team->opening_balance,
+                'expiry_threshold_days' => $team->expiry_threshold_days,
+                'notification_time' => $team->notification_time,
             ],
             'members' => $team->members()->get()->map(fn ($member) => [
                 'id' => $member->id,
@@ -93,6 +95,8 @@ class TeamController extends Controller
             $team->update([
                 'name' => $request->validated('name'),
                 'opening_balance' => $request->validated('opening_balance', 0),
+                'expiry_threshold_days' => $request->validated('expiry_threshold_days', 3),
+                'notification_time' => $request->validated('notification_time', '09:00'),
             ]);
 
             return $team;

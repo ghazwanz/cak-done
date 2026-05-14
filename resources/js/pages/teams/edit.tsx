@@ -67,7 +67,7 @@ export default function TeamEdit({
         () =>
             permissions.canUpdateTeam
                 ? `Edit ${team.name}`
-                : `View ${team.name}`,
+                : `Lihat ${team.name}`,
         [permissions.canUpdateTeam, team.name],
     );
 
@@ -100,8 +100,8 @@ export default function TeamEdit({
                         <>
                             <Heading
                                 variant="small"
-                                title="Team settings"
-                                description="Update your team name and settings"
+                                title="Pengaturan Tim"
+                                description="Perbarui nama dan pengaturan tim Anda"
                             />
 
                             <Form
@@ -112,7 +112,7 @@ export default function TeamEdit({
                                     <>
                                         <div className="grid gap-2">
                                             <Label htmlFor="name">
-                                                Team name
+                                                Nama Tim
                                             </Label>
                                             <Input
                                                 id="name"
@@ -124,13 +124,48 @@ export default function TeamEdit({
                                             <InputError message={errors.name} />
                                         </div>
 
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="expiry_threshold_days">
+                                                Ambang Batas Kedaluwarsa (Hari)
+                                            </Label>
+                                            <Input
+                                                id="expiry_threshold_days"
+                                                name="expiry_threshold_days"
+                                                type="number"
+                                                min="1"
+                                                defaultValue={team.expiry_threshold_days ?? 3}
+                                                required
+                                            />
+                                            <p className="text-sm text-muted-foreground">
+                                                Jumlah hari sebelum kedaluwarsa untuk mengirim notifikasi peringatan.
+                                            </p>
+                                            <InputError message={errors.expiry_threshold_days} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="notification_time">
+                                                Waktu Peringatan Harian
+                                            </Label>
+                                            <Input
+                                                id="notification_time"
+                                                name="notification_time"
+                                                type="time"
+                                                defaultValue={team.notification_time ?? '09:00'}
+                                                required
+                                            />
+                                            <p className="text-sm text-muted-foreground">
+                                                Waktu sistem akan mengirimkan ringkasan stok kedaluwarsa setiap hari.
+                                            </p>
+                                            <InputError message={errors.notification_time} />
+                                        </div>
+
                                         <div className="flex items-center gap-4">
                                             <Button
                                                 type="submit"
                                                 data-test="team-save-button"
                                                 disabled={processing}
                                             >
-                                                Save
+                                                Simpan
                                             </Button>
                                         </div>
                                     </>
@@ -148,10 +183,10 @@ export default function TeamEdit({
                     <div className="flex items-center justify-between">
                         <Heading
                             variant="small"
-                            title="Team members"
+                            title="Anggota Tim"
                             description={
                                 permissions.canCreateInvitation
-                                    ? 'Manage who belongs to this team'
+                                    ? 'Kelola anggota yang tergabung dalam tim ini'
                                     : ''
                             }
                         />
@@ -161,7 +196,7 @@ export default function TeamEdit({
                                 data-test="invite-member-button"
                                 onClick={() => setInviteDialogOpen(true)}
                             >
-                                <UserPlus /> Invite member
+                                <UserPlus /> Undang Anggota
                             </Button>
                         ) : null}
                     </div>
@@ -251,7 +286,7 @@ export default function TeamEdit({
                                                     </Button>
                                                 </TooltipTrigger>
                                                 <TooltipContent>
-                                                    <p>Remove member</p>
+                                                    <p>Hapus anggota</p>
                                                 </TooltipContent>
                                             </Tooltip>
                                         </TooltipProvider>
@@ -266,8 +301,8 @@ export default function TeamEdit({
                     <div className="space-y-6">
                         <Heading
                             variant="small"
-                            title="Pending invitations"
-                            description="Invitations that haven't been accepted yet"
+                            title="Undangan Tertunda"
+                            description="Daftar undangan yang belum diterima"
                         />
 
                         <div className="space-y-3">
@@ -309,7 +344,7 @@ export default function TeamEdit({
                                                     </Button>
                                                 </TooltipTrigger>
                                                 <TooltipContent>
-                                                    <p>Cancel invitation</p>
+                                                    <p>Batalkan undangan</p>
                                                 </TooltipContent>
                                             </Tooltip>
                                         </TooltipProvider>
@@ -324,15 +359,15 @@ export default function TeamEdit({
                     <div className="space-y-6">
                         <Heading
                             variant="small"
-                            title="Delete team"
-                            description="Permanently delete your team"
+                            title="Hapus Tim"
+                            description="Hapus tim Anda secara permanen"
                         />
                         <div className="space-y-4 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
                             <div className="relative space-y-0.5 text-destructive">
-                                <p className="font-medium">Warning</p>
+                                <p className="font-medium">Peringatan</p>
                                 <p className="text-sm">
-                                    Please proceed with caution, this cannot be
-                                    undone.
+                                    Harap berhati-hati, tindakan ini tidak dapat
+                                    dibatalkan.
                                 </p>
                             </div>
                             <Button
@@ -340,7 +375,7 @@ export default function TeamEdit({
                                 data-test="delete-team-button"
                                 onClick={() => setDeleteDialogOpen(true)}
                             >
-                                Delete team
+                                Hapus tim
                             </Button>
                         </div>
                     </div>
@@ -384,7 +419,7 @@ export default function TeamEdit({
 TeamEdit.layout = (props: { team: { name: string; slug: string } }) => ({
     breadcrumbs: [
         {
-            title: 'Teams',
+            title: 'Tim',
             href: index(),
         },
         {

@@ -1,9 +1,9 @@
 import { Moon, Sun } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAppearance } from '@/hooks/use-appearance';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
 
 export function SidebarAppearanceToggle() {
     const [mounted, setMounted] = useState(false);

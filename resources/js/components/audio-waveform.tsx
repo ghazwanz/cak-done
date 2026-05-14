@@ -13,16 +13,29 @@ export function AudioWaveform({ isRecording }: AudioWaveformProps) {
 
     useEffect(() => {
         if (!isRecording) {
-            if (animationRef.current) cancelAnimationFrame(animationRef.current);
-            if (sourceRef.current) sourceRef.current.disconnect();
-            if (audioContextRef.current) audioContextRef.current.close();
+            if (animationRef.current) {
+cancelAnimationFrame(animationRef.current);
+}
+
+            if (sourceRef.current) {
+sourceRef.current.disconnect();
+}
+
+            if (audioContextRef.current) {
+audioContextRef.current.close();
+}
             
             // Clear canvas
             const canvas = canvasRef.current;
+
             if (canvas) {
                 const ctx = canvas.getContext('2d');
-                if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (ctx) {
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
             }
+
             return;
         }
 
@@ -43,7 +56,10 @@ export function AudioWaveform({ isRecording }: AudioWaveformProps) {
                 const ctx = canvas?.getContext('2d');
 
                 const draw = () => {
-                    if (!isRecording) return;
+                    if (!isRecording) {
+return;
+}
+
                     animationRef.current = requestAnimationFrame(draw);
 
                     analyserRef.current?.getByteFrequencyData(dataArray);
@@ -80,9 +96,17 @@ export function AudioWaveform({ isRecording }: AudioWaveformProps) {
         startAudioAnalysis();
 
         return () => {
-            if (animationRef.current) cancelAnimationFrame(animationRef.current);
-            if (sourceRef.current) sourceRef.current.disconnect();
-            if (audioContextRef.current) audioContextRef.current.close();
+            if (animationRef.current) {
+cancelAnimationFrame(animationRef.current);
+}
+
+            if (sourceRef.current) {
+sourceRef.current.disconnect();
+}
+
+            if (audioContextRef.current) {
+audioContextRef.current.close();
+}
         };
     }, [isRecording]);
 

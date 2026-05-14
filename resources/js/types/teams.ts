@@ -8,6 +8,7 @@ export type Team = {
     role?: TeamRole;
     roleLabel?: string;
     isCurrent?: boolean;
+    expiry_threshold_days?: number;
 };
 
 export type TeamMember = {

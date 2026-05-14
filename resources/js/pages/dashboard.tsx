@@ -1,12 +1,12 @@
 import { Head, router, Link } from '@inertiajs/react';
+import { Wallet, ArrowDown, ArrowUp, FileText, ChartLine, Clock, ChevronRight, Calendar, Sparkles, AlertCircle } from 'lucide-react';
+import { FormEvent, useState } from 'react';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { dashboard } from '@/routes';
 import inventory from '@/routes/inventory';
 import transactions from '@/routes/transactions';
-import { FormEvent, useState } from 'react';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Wallet, ArrowDown, ArrowUp, FileText, ChartLine, Clock, ChevronRight, Calendar, Sparkles, AlertCircle } from 'lucide-react';
 
 interface CashFlowData {
     date: string;
@@ -80,7 +80,10 @@ export default function Dashboard({
     ];
 
     const handlePeriodChange = (newPeriod: string) => {
-        if (!teamSlug) return;
+        if (!teamSlug) {
+return;
+}
+
         router.get(dashboard.url(teamSlug), { period: newPeriod }, {
             preserveState: true,
             preserveScroll: true,
@@ -90,8 +93,8 @@ export default function Dashboard({
     return (
         <>
             <Head title="Dashboard Utama - Cak DONE" />
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 pb-32 bg-background relative h-full">
-                <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex-1 overflow-y-auto p-4 bg-background relative h-full">
+                <div className="space-y-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <h2 className="text-2xl font-bold text-foreground">Ringkasan Finansial</h2>

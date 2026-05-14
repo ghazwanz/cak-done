@@ -1,0 +1,36 @@
+{
+    "id": "/?source=pwa",
+    "name": "Cak Done",
+    "short_name": "Cak Done",
+    "description": "Cak Done membantu tim mengelola pekerjaan, inventaris, transaksi, dan laporan bisnis dalam satu aplikasi modern.",
+    "start_url": "/?source=pwa",
+    "scope": "/",
+    "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+    "orientation": "portrait-primary",
+    "background_color": "#f8fbff",
+    "theme_color": "#1469d8",
+    "categories": ["business", "productivity", "finance"],
+    "lang": "id-ID",
+    "dir": "ltr",
+    "icons": [
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/favicon.ico",
+            "sizes": "48x48 32x32 16x16",
+            "type": "image/x-icon",
+            "purpose": "any"
+        }
+    ]
+}

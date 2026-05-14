@@ -56,7 +56,7 @@ export default function TransactionsIndex({ transactions: transactionsData }: Pr
         <>
             <Head title="Riwayat Transaksi — Cak DONE" />
 
-            <div className="flex flex-col gap-6 p-4 md:p-8">
+            <div className="flex flex-col gap-6 p-4">
                 {/* Header */}
                 <div className="flex flex-col gap-1">
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Riwayat Transaksi</h1>

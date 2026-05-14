@@ -478,7 +478,7 @@ class AggregatorService
 
         $alerts = [];
         foreach ($holidays as $h) {
-            $daysTo = now()->diffInDays(Carbon::parse($h['date']), false);
+            $daysTo = ceil(now()->diffInDays(Carbon::parse($h['date']), false));
             if ($daysTo >= 0 && $daysTo <= 10) {
                 $alerts[] = [
                     'name' => $h['name'],
@@ -592,10 +592,13 @@ class AggregatorService
      */
     public function getWeeklyPatternInsights(Team $team): array
     {
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
+        $dayOfWeekRaw = $isSqlite ? "strftime('%w', created_at)" : 'extract(dow from created_at)';
+
         $data = $team->transactions()
             ->where('created_at', '>=', now()->subDays(28))
             ->select(
-                DB::raw('EXTRACT(DOW FROM created_at) as dow'),
+                DB::raw("$dayOfWeekRaw as dow"),
                 DB::raw('SUM(amount) as total_amount'),
                 DB::raw('COUNT(*) as count'),
                 'type'
@@ -632,5 +635,57 @@ class AggregatorService
         $expense = (float) $team->transactions()->where('type', 'expense')->sum('amount');
 
         return (float) ($team->opening_balance ?? 0) + $income - $expense;
+    }
+
+    /**
+     * Get emergency report for freezer/chiller failures.
+     */
+    public function getEmergencyViabilityReport(Team $team): array
+    {
+        $atRiskItems = $team->inventoryItems()
+            ->whereIn('storage_type', ['freezer', 'chiller'])
+            ->with(['batches' => function ($query) {
+                $query->where('qty', '>', 0);
+            }])
+            ->get();
+
+        $report = [
+            'critical' => [], // Must use/sell in < 2 hours (Frozen meat, dairy)
+            'urgent' => [],   // Must use/sell in < 4 hours (Vegetables, cooked food)
+            'sturdy' => [],   // Can last 6-8 hours if unopened (Condiments, some fruits)
+        ];
+
+        foreach ($atRiskItems as $item) {
+            $totalQty = $item->batches->sum('qty');
+            if ($totalQty <= 0) {
+                continue;
+            }
+
+            $data = [
+                'name' => $item->name,
+                'qty' => $totalQty,
+                'unit' => $item->unit,
+                'storage' => $item->storage_type,
+            ];
+
+            // Simple heuristic for risk categorization
+            $category = strtolower($item->category ?? '');
+
+            if ($item->storage_type === 'freezer') {
+                if (str_contains($category, 'daging') || str_contains($category, 'ikan') || str_contains($category, 'frozen')) {
+                    $report['critical'][] = $data;
+                } else {
+                    $report['urgent'][] = $data;
+                }
+            } else {
+                if (str_contains($category, 'sayur') || str_contains($category, 'buah')) {
+                    $report['urgent'][] = $data;
+                } else {
+                    $report['sturdy'][] = $data;
+                }
+            }
+        }
+
+        return $report;
     }
 }

@@ -1,20 +1,20 @@
-import { useState, useRef, useEffect } from 'react';
 import { Head, usePage, useForm, router } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Sparkles, Mic, Image as ImageIcon, Send, Loader2, Bot, User, Check, X, Square, AlertCircle, TrendingUp, Package } from 'lucide-react';
+import { History, AlertTriangle, ArrowRight } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AudioWaveform } from '@/components/audio-waveform';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { dashboard } from '@/routes';
 import * as ai from '@/routes/ai';
 import chatRoutes from '@/routes/ai/chat';
 import * as catat from '@/routes/catat';
 import * as transactions from '@/routes/transactions';
-import { BreadcrumbItem } from '@/types';
-import { dashboard } from '@/routes';
-import { History, AlertTriangle, ArrowRight } from 'lucide-react';
+import type { BreadcrumbItem } from '@/types';
 
 interface Message {
     id: string;
@@ -70,7 +70,9 @@ export default function Catat({ recentTransactions = [], lowStockItems = [], ini
 
     // Save to backend whenever messages change
     useEffect(() => {
-        if (!mounted || messages.length <= 1) return; // Don't save just the greeting
+        if (!mounted || messages.length <= 1) {
+return;
+} // Don't save just the greeting
 
         const timer = setTimeout(() => {
             fetch(chatRoutes.save.url(currentTeam.slug), {
@@ -87,7 +89,9 @@ export default function Catat({ recentTransactions = [], lowStockItems = [], ini
     }, [messages, mounted, currentTeam.slug]);
 
     const clearChat = () => {
-        if (!confirm('Apakah Anda yakin ingin mereset seluruh riwayat percakapan?')) return;
+        if (!confirm('Apakah Anda yakin ingin mereset seluruh riwayat percakapan?')) {
+return;
+}
         
         router.post(chatRoutes.clear.url(currentTeam.slug), {}, {
             onSuccess: () => {
@@ -103,17 +107,24 @@ export default function Catat({ recentTransactions = [], lowStockItems = [], ini
                 setRecordingTime(prev => prev + 1);
             }, 1000);
         } else {
-            if (timerRef.current) clearInterval(timerRef.current);
+            if (timerRef.current) {
+clearInterval(timerRef.current);
+}
+
             setRecordingTime(0);
         }
+
         return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
+            if (timerRef.current) {
+clearInterval(timerRef.current);
+}
         };
     }, [isRecording]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
+
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
@@ -153,7 +164,10 @@ export default function Catat({ recentTransactions = [], lowStockItems = [], ini
 
     const handleProcess = async (file?: File, mode: 'audio' | 'image' | 'text' = 'text') => {
         const text = mode === 'text' ? inputText : '';
-        if (mode === 'text' && !text.trim()) return;
+
+        if (mode === 'text' && !text.trim()) {
+return;
+}
 
         // Add user message to stream
         const userMsg: Message = {
@@ -163,13 +177,26 @@ export default function Catat({ recentTransactions = [], lowStockItems = [], ini
             timestamp: new Date(),
         };
         setMessages(prev => [...prev, userMsg]);
-        if (mode === 'text') setInputText('');
+
+        if (mode === 'text') {
+setInputText('');
+}
 
         setProcessing(true);
         const formData = new FormData();
-        if (mode === 'text') formData.append('text', text);
-        if (mode === 'audio' && file) formData.append('audio', file);
-        if (mode === 'image' && file) formData.append('image', file);
+
+        if (mode === 'text') {
+formData.append('text', text);
+}
+
+        if (mode === 'audio' && file) {
+formData.append('audio', file);
+}
+
+        if (mode === 'image' && file) {
+formData.append('image', file);
+}
+
         formData.append('intent_context', 'catat');
 
         try {
@@ -300,7 +327,10 @@ export default function Catat({ recentTransactions = [], lowStockItems = [], ini
                                             accept="image/*"
                                             onChange={(e) => {
                                                 const file = e.target.files?.[0];
-                                                if (file) handleProcess(file, 'image');
+
+                                                if (file) {
+handleProcess(file, 'image');
+}
                                             }}
                                         />
                                         <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-primary transition-colors">

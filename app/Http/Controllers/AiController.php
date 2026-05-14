@@ -76,7 +76,7 @@ class AiController extends Controller
             'text' => 'nullable|string',
             'audio' => 'nullable|file|mimes:wav,mp3,m4a,ogg,webm',
             'image' => 'nullable|file|mimes:jpg,jpeg,png,webp',
-            'intent_context' => 'nullable|string|in:smart_entry,dashboard,catat',
+            'intent_context' => 'nullable|string|in:smart_entry,dashboard,catat,emergency_mode',
         ]);
 
         $text = $request->input('text');
@@ -95,6 +95,11 @@ class AiController extends Controller
         // 1. First, check if simple prompt (Smart Entry) -> Always RECORD
         if ($context === 'smart_entry') {
             return $this->handleRecordIntent($current_team, $text, $audio, $image);
+        }
+
+        // 1.5 Check for Emergency Mode
+        if ($context === 'emergency_mode') {
+            return $this->handleEmergencyIntent($current_team);
         }
 
         // 2. Hybrid Page (Dashboard / CATAT): Determine Intent via Classifier or Keyword
@@ -371,5 +376,22 @@ class AiController extends Controller
         $inquiryPattern = '/\b(apa|opo|berapa|piro|mana|endi|kapan|bagaimana|piye|kenapa|kenopo|mengapa|mengapo|kok|kenapa|mengapa|sebutkan|tampilkan|berikan|info|summary|ringkasan|laporan|statistik|grafik|profit|laba|untung|rugi|kadaluarsa|expired|basi|sisa|stok|paling laku|terlaris|analisis|prediksi)\b/i';
 
         return (bool) preg_match($inquiryPattern, $text);
+    }
+
+    protected function handleEmergencyIntent(Team $team)
+    {
+        $report = $this->aggregator->getEmergencyViabilityReport($team);
+
+        // Narrative context for AI
+        $prompt = 'SITUASI DARURAT: Freezer mati atau alat pendingin rusak. Berikut adalah data stok yang terancam. Analisis dan berikan daftar prioritas tindakan (apa yang harus segera dijual/dimasak/dipindahkan) dalam gaya bahasa Suroboyoan yang menenangkan tapi tegas.';
+
+        $narration = $this->ai->narrateInsights($prompt, ['emergency_report' => $report], []);
+
+        return response()->json([
+            'intent' => 'EMERGENCY',
+            'success' => true,
+            'narration' => $narration,
+            'data' => $report,
+        ]);
     }
 }

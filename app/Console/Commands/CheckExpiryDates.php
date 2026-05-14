@@ -2,34 +2,52 @@
 
 namespace App\Console\Commands;
 
-use App\Models\InventoryBatch;
-use App\Notifications\ExpiryAlertNotification;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
+use App\Jobs\ProcessTeamInventoryAlertsJob;
+use App\Models\Team;
 use Illuminate\Console\Command;
 
-#[Signature('app:check-expiry-dates')]
-#[Description('Periksa stok yang mendekati kadaluarsa dan kirim notifikasi ke pemilik tim.')]
 class CheckExpiryDates extends Command
 {
-    public function handle()
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'inventory:check-expiry';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Dispatch inventory alert jobs for teams whose notification time has reached';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle(): void
     {
-        $this->info('Memeriksa stok kadaluarsa...');
+        $nowTime = now()->format('H:i');
 
-        // Cari batch yang kadaluarsa dalam 3 hari ke depan
-        $batches = InventoryBatch::with('team.owner')
-            ->where('expiry_date', '<=', now()->addDays(3))
-            ->where('expiry_date', '>', now())
-            ->get();
+        // Find teams where notification_time matches the current hour/minute
+        // Or process all if running manually via CLI without minute precision
+        $teams = Team::where('notification_time', $nowTime)->get();
 
-        foreach ($batches as $batch) {
-            $owner = $batch->team->owner;
-            if ($owner) {
-                $owner->notify(new ExpiryAlertNotification($batch));
-                $this->line("Notifikasi dikirim untuk {$batch->item_name} (Tim: {$batch->team->name})");
-            }
+        if ($teams->isEmpty() && ! $this->laravel->runningInConsole()) {
+            return;
         }
 
-        $this->info('Pemeriksaan selesai.');
+        // If running manually from CLI, we might want to force all
+        if ($this->laravel->runningInConsole() && $teams->isEmpty()) {
+            $this->info("No teams scheduled for $nowTime. Processing all teams due to manual CLI run.");
+            $teams = Team::all();
+        }
+
+        foreach ($teams as $team) {
+            $this->info("Dispatching inventory alert job for team: {$team->name}");
+            ProcessTeamInventoryAlertsJob::dispatch($team);
+        }
+
+        $this->info('All scheduled inventory alert jobs have been dispatched.');
     }
 }

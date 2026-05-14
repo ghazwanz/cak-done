@@ -35,10 +35,11 @@ class InventoryController extends Controller
             'initial_qty' => ['nullable', 'integer', 'min:0'],
             'initial_cogs' => ['nullable', 'numeric', 'min:0'],
             'initial_expiry' => ['nullable', 'date'],
+            'storage_type' => ['nullable', 'string', 'in:freezer,chiller,room_temp'],
         ]);
 
         $data = $request->only([
-            'name', 'category', 'unit', 'selling_price', 'low_stock_threshold',
+            'name', 'category', 'unit', 'selling_price', 'low_stock_threshold', 'storage_type',
         ]);
 
         if (isset($data['selling_price'])) {
@@ -71,10 +72,11 @@ class InventoryController extends Controller
             'unit' => ['required', 'string', 'max:255'],
             'selling_price' => ['nullable', 'numeric', 'min:0'],
             'low_stock_threshold' => ['required', 'integer', 'min:0'],
+            'storage_type' => ['nullable', 'string', 'in:freezer,chiller,room_temp'],
         ]);
 
         $data = $request->only([
-            'name', 'category', 'unit', 'selling_price', 'low_stock_threshold',
+            'name', 'category', 'unit', 'selling_price', 'low_stock_threshold', 'storage_type',
         ]);
 
         if (isset($data['selling_price'])) {
