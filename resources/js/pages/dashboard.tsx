@@ -151,7 +151,7 @@ return;
                                             </div>
                                             {alert.days_to !== undefined && (
                                                 <span className="text-[10px] font-black uppercase px-2 py-1 bg-amber-500/10 text-amber-600 rounded-lg">
-                                                    H-{alert.days_to}
+                                                    H-{Math.round(alert.days_to)}
                                                 </span>
                                             )}
                                         </div>
