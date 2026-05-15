@@ -187,12 +187,14 @@ class AggregatorService
     {
         $holidays = [
             '01-01' => ['name' => 'Tahun Baru Masehi', 'is_hijri' => false, 'keywords' => ['tahun baru', 'masehi', 'new year']],
-            '02-14' => ['name' => 'Hari Valentine', 'is_hijri' => false, 'keywords' => ['valentine', 'kasih sayang']],
+            '03-31' => ['name' => 'Idul Fitri (2026)', 'is_hijri' => true, 'keywords' => ['lebaran', 'idul fitri', 'ied', 'mudik']],
             '05-01' => ['name' => 'Hari Buruh', 'is_hijri' => false, 'keywords' => ['buruh', 'may day']],
-            '05-27' => ['name' => 'Idul Adha', 'is_hijri' => true, 'keywords' => ['idul adha', 'kurban', 'qurban', 'haji']],
+            '06-16' => ['name' => 'Idul Adha (2026)', 'is_hijri' => true, 'keywords' => ['idul adha', 'kurban', 'qurban', 'haji']],
             '08-17' => ['name' => 'Hari Kemerdekaan RI', 'is_hijri' => false, 'keywords' => ['kemerdekaan', 'agustusan', '17 agustus']],
             '10-28' => ['name' => 'Sumpah Pemuda', 'is_hijri' => false, 'keywords' => ['sumpah pemuda']],
             '12-25' => ['name' => 'Hari Raya Natal', 'is_hijri' => false, 'keywords' => ['natal', 'christmas']],
+            '03-09' => ['name' => 'Idul Fitri (2027)', 'is_hijri' => true, 'keywords' => ['lebaran', 'idul fitri', 'ied', 'mudik']],
+            '05-16' => ['name' => 'Idul Adha (2027)', 'is_hijri' => true, 'keywords' => ['idul adha', 'kurban', 'qurban', 'haji']],
         ];
 
         $upcomingHoliday = null;
@@ -471,9 +473,11 @@ class AggregatorService
     public function getUpcomingHolidayAlerts(): array
     {
         $holidays = [
-            ['date' => '2026-05-24', 'name' => 'Hari Raya Idul Adha', 'advice' => 'Stok daging dan bumbu sate biasanya naik drastis!'],
-            ['date' => '2026-06-01', 'name' => 'Hari Lahir Pancasila', 'advice' => 'Libur panjang, biasanya pesanan kuliner meningkat.'],
-            ['date' => '2026-08-17', 'name' => 'Hari Kemerdekaan RI', 'advice' => 'Banyak lomba dan hajatan, pesanan nasi kotak biasanya melonjak.'],
+            ['date' => '2026-06-01', 'name' => 'Hari Lahir Pancasila', 'advice' => 'Libur nasional, potensi pelanggan lokal meningkat.'],
+            ['date' => '2026-06-16', 'name' => 'Hari Raya Idul Adha', 'advice' => 'Siapkan stok daging dan bumbu dapur, biasanya pesanan melonjak!'],
+            ['date' => '2026-08-17', 'name' => 'Hari Kemerdekaan RI', 'advice' => 'Banyak event & lomba, pesanan nasi kotak/snack biasanya ramai.'],
+            ['date' => '2026-12-25', 'name' => 'Hari Raya Natal', 'advice' => 'Musim liburan, pastikan stok bahan baku aman untuk akhir tahun.'],
+            ['date' => '2027-03-09', 'name' => 'Hari Raya Idul Fitri', 'advice' => 'Puncak belanja tahunan! Pastikan stok melimpah dan cashflow terjaga.'],
         ];
 
         $alerts = [];
@@ -610,23 +614,33 @@ class AggregatorService
         $busyDays = [];
 
         foreach ($data as $row) {
+            // Focus only on income spikes for business anticipation
+            if ($row->type !== 'income') {
+                continue;
+            }
+
             // If revenue on this day of week is 30% higher than average daily revenue
             $avgDaily = $team->transactions()
-                ->where('type', $row->type)
+                ->where('type', 'income')
                 ->where('created_at', '>=', now()->subDays(28))
                 ->sum('amount') / 28;
 
             if ($row->total_amount > ($avgDaily * 1.3)) {
-                $busyDays[] = [
-                    'day' => $days[$row->dow],
+                $spikePercent = round((($row->total_amount / $avgDaily) - 1) * 100);
+                $dayName = $days[$row->dow];
+
+                // Use day as key to ensure uniqueness
+                $busyDays[$dayName] = [
+                    'day' => $dayName,
                     'type' => $row->type,
                     'is_today' => now()->dayOfWeek == $row->dow,
                     'is_tomorrow' => now()->addDay()->dayOfWeek == $row->dow,
+                    'message' => "Berdasarkan data 4 minggu terakhir, hari {$dayName} biasanya ada lonjakan omzet sekitar {$spikePercent}% dibanding hari biasa. Siap-siap rek!",
                 ];
             }
         }
 
-        return $busyDays;
+        return array_values($busyDays);
     }
 
     public function getCurrentBalance(Team $team): float
@@ -668,17 +682,21 @@ class AggregatorService
                 'storage' => $item->storage_type,
             ];
 
-            // Simple heuristic for risk categorization
+            // Heuristic for risk categorization using name and category
             $category = strtolower($item->category ?? '');
+            $name = strtolower($item->name);
+            $combined = "$category $name";
 
             if ($item->storage_type === 'freezer') {
-                if (str_contains($category, 'daging') || str_contains($category, 'ikan') || str_contains($category, 'frozen')) {
+                // High risk frozen items
+                if (preg_match('/(daging|ikan|ayam|sapi|kambing|seafood|frozen|ice cream|es krim|nugget|sosis)/i', $combined)) {
                     $report['critical'][] = $data;
                 } else {
                     $report['urgent'][] = $data;
                 }
-            } else {
-                if (str_contains($category, 'sayur') || str_contains($category, 'buah')) {
+            } else { // Chiller
+                // High risk chilled items
+                if (preg_match('/(susu|dairy|keju|telur|sayur|buah|salad|masakan|matang)/i', $combined)) {
                     $report['urgent'][] = $data;
                 } else {
                     $report['sturdy'][] = $data;

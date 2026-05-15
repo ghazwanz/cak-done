@@ -84,8 +84,8 @@ class AiController extends Controller
         $image = $request->file('image');
         $context = $request->input('intent_context', 'dashboard');
 
-        // If nothing is provided, return error early
-        if (! $text && ! $audio && ! $image) {
+        // If nothing is provided, return error early (unless it's emergency mode)
+        if ($context !== 'emergency_mode' && ! $text && ! $audio && ! $image) {
             return response()->json([
                 'success' => false,
                 'message' => 'Input kosong rek. Coba ngomong atau ketik sesuatu.',

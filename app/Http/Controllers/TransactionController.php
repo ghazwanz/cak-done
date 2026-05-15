@@ -26,7 +26,11 @@ class TransactionController extends Controller
     public function index(Request $request, Team $current_team): Response
     {
         return Inertia::render('transactions/index', [
-            'transactions' => $this->transactionService->getTransactionsOrderedByDate($current_team),
+            'transactions' => $this->transactionService->getTransactionsOrderedByDate(
+                $current_team,
+                $request->only(['search', 'start_date', 'end_date'])
+            ),
+            'filters' => $request->only(['search', 'start_date', 'end_date']),
         ]);
     }
 

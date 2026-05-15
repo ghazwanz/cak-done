@@ -6,7 +6,7 @@ use App\Models\InventoryItem;
 use App\Models\Team;
 use App\Models\Transaction;
 use App\Notifications\LowStockAlertNotification;
-use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -59,14 +59,14 @@ class TransactionService
             [
                 'amount' => $validated['amount'],
                 'frequency' => $validated['frequency'] ?? 'monthly',
-                'category' => $validated['category'],
                 'is_active' => true,
                 'next_due_date' => $this->calculateNextDueDate($validated['frequency'] ?? 'monthly'),
+                'user_id' => auth()->id(),
             ]
         );
     }
 
-    protected function calculateNextDueDate(string $frequency): Carbon
+    protected function calculateNextDueDate(string $frequency): CarbonInterface
     {
         $date = now();
         switch ($frequency) {
@@ -102,30 +102,45 @@ class TransactionService
             if ($recurring) {
                 // Update next_due_date based on frequency
                 $nextDue = now();
-                switch ($recurring->frequency) {
-                    case 'daily': $nextDue->addDay();
-                        break;
-                    case 'weekly': $nextDue->addWeek();
-                        break;
-                    case 'monthly': $nextDue->addMonth();
-                        break;
-                    case 'yearly': $nextDue->addYear();
-                        break;
-                }
+                $nextDue = match ($recurring->frequency) {
+                    'daily' => $nextDue->addDay(),
+                    'weekly' => $nextDue->addWeek(),
+                    'monthly' => $nextDue->addMonth(),
+                    'yearly' => $nextDue->addYear(),
+                    default => $nextDue->addMonth(),
+                };
                 $recurring->update(['next_due_date' => $nextDue]);
             }
         }
     }
 
     /**
-     * Get transactions for a team, ordered by date.
+     * Get transactions for a team, ordered by date with optional filtering.
      */
-    public function getTransactionsOrderedByDate(Team $team, int $perPage = 15)
+    public function getTransactionsOrderedByDate(Team $team, array $filters = [], int $perPage = 15)
     {
-        return $team->transactions()
+        $query = $team->transactions()
             ->with('user')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+            ->orderBy('created_at', 'desc');
+
+        if (! empty($filters['search'])) {
+            $search = strtolower($filters['search']);
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(item_name) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(category) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(raw_input) LIKE ?', ["%{$search}%"]);
+            });
+        }
+
+        if (! empty($filters['start_date'])) {
+            $query->whereDate('created_at', '>=', $filters['start_date']);
+        }
+
+        if (! empty($filters['end_date'])) {
+            $query->whereDate('created_at', '<=', $filters['end_date']);
+        }
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     /**

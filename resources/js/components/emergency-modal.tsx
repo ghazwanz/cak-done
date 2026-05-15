@@ -28,7 +28,7 @@ export function EmergencyModal({ open, onOpenChange, teamSlug }: EmergencyModalP
         setLoading(true);
 
         try {
-            const response = await fetch(`/teams/${teamSlug}/ai/process`, {
+            const response = await fetch(`/${teamSlug}/ai/process`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -41,12 +41,15 @@ export function EmergencyModal({ open, onOpenChange, teamSlug }: EmergencyModalP
 
             const result = await response.json();
 
-            if (result.success) {
+            if (response.ok && result.success) {
                 setReport(result.data);
                 setNarration(result.narration);
+            } else {
+                throw new Error(result.message || result.error || 'Gagal memproses data darurat');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Emergency trigger failed:', error);
+            alert(error.message || 'Terjadi kesalahan saat mengaktifkan mode darurat.');
         } finally {
             setLoading(false);
         }

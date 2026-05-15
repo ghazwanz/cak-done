@@ -312,7 +312,7 @@ clearTimeout(countdownIntervalRef.current);
                     <Sparkles className="h-6 w-6 text-white group-hover:animate-pulse" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] border-none shadow-2xl bg-card glass">
+            <DialogContent className="sm:max-w-[600px] border-none shadow-2xl bg-card">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
                         <Sparkles className="h-6 w-6 text-primary" />

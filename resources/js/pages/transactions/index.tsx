@@ -1,9 +1,10 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router, Link } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { ArrowDownLeft, ArrowUpRight, Wallet, ReceiptText, Search, Filter } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Wallet, ReceiptText, Search, Filter, Calendar, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
     Table,
     TableBody,
@@ -12,9 +13,20 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import {
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination";
 import { dashboard } from '@/routes';
 import * as transactions from '@/routes/transactions';
 import type { BreadcrumbItem } from '@/types';
+import { useState, useEffect, useCallback } from 'react';
+import debounce from 'lodash/debounce';
 
 interface Transaction {
     id: number;
@@ -33,14 +45,69 @@ interface Transaction {
 interface Props {
     transactions: {
         data: Transaction[];
-        links: any[];
-        meta: any;
+        links: {
+            url: string | null;
+            label: string;
+            active: boolean;
+        }[];
+        current_page: number;
+        from: number;
+        last_page: number;
+        path: string;
+        per_page: number;
+        to: number;
+        total: number;
+    };
+    filters: {
+        search?: string;
+        start_date?: string;
+        end_date?: string;
     };
 }
 
-export default function TransactionsIndex({ transactions: transactionsData }: Props) {
+export default function TransactionsIndex({ transactions: transactionsData, filters }: Props) {
     const { currentTeam } = usePage().props as any;
     const items = transactionsData.data;
+
+    const [search, setSearch] = useState(filters.search || '');
+    const [startDate, setStartDate] = useState(filters.start_date || '');
+    const [endDate, setEndDate] = useState(filters.end_date || '');
+
+    const handleSearch = useCallback(
+        debounce((value: string) => {
+            router.get(
+                transactions.index.url(currentTeam.slug, { query: { search: value, start_date: startDate, end_date: endDate } }),
+                {},
+                { preserveState: true, replace: true }
+            );
+        }, 300),
+        [currentTeam.slug, startDate, endDate]
+    );
+
+    const applyDateFilter = () => {
+        router.get(
+            transactions.index.url(currentTeam.slug, { query: { search, start_date: startDate, end_date: endDate } }),
+            {},
+            { preserveState: true, replace: true }
+        );
+    };
+
+    const clearFilters = () => {
+        setSearch('');
+        setStartDate('');
+        setEndDate('');
+        router.get(
+            transactions.index.url(currentTeam.slug),
+            {},
+            { preserveState: true, replace: true }
+        );
+    };
+
+    useEffect(() => {
+        if (search !== (filters.search || '')) {
+            handleSearch(search);
+        }
+    }, [search]);
 
     const totalIncome = items
         .filter((t) => t.type === 'income')
@@ -116,18 +183,54 @@ export default function TransactionsIndex({ transactions: transactionsData }: Pr
 
                 {/* Table & Controls */}
                 <Card className="border-border bg-card overflow-hidden">
-                    <CardHeader className="border-b border-border bg-muted/30 px-6 flex flex-row items-center justify-between space-y-0 py-4">
+                    <CardHeader className="border-b border-border bg-muted/30 px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4">
                         <CardTitle className="text-lg font-semibold flex items-center gap-2 text-foreground">
                             <ReceiptText className="h-5 w-5 text-primary" />
                             Jurnal Finansial
                         </CardTitle>
-                        <div className="flex items-center gap-2">
-                            <div className="relative">
+                        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                            <div className="relative w-full sm:w-[250px]">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Cari transaksi..."
-                                    className="pl-9 h-9 w-[200px] lg:w-[300px] bg-background border-border"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="pl-9 h-9 bg-background border-border"
                                 />
+                                {search && (
+                                    <button 
+                                        onClick={() => setSearch('')}
+                                        className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <div className="flex items-center gap-1 bg-background border border-border rounded-md px-2 h-9">
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    <input 
+                                        type="date" 
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="bg-transparent border-none text-xs focus:ring-0 text-foreground outline-none"
+                                    />
+                                    <span className="text-muted-foreground">-</span>
+                                    <input 
+                                        type="date" 
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="bg-transparent border-none text-xs focus:ring-0 text-foreground outline-none"
+                                    />
+                                </div>
+                                <Button size="sm" onClick={applyDateFilter} className="h-9 px-3">
+                                    Filter
+                                </Button>
+                                {(search || startDate || endDate) && (
+                                    <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2 text-muted-foreground">
+                                        Reset
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </CardHeader>
@@ -201,6 +304,61 @@ export default function TransactionsIndex({ transactions: transactionsData }: Pr
                             </Table>
                         </div>
                     </CardContent>
+                    
+                    {/* Pagination */}
+                    {transactionsData.total > transactionsData.per_page && (
+                        <div className="border-t border-border p-4 bg-muted/20">
+                            <Pagination>
+                                <PaginationContent>
+                                    <PaginationItem>
+                                        {transactionsData.links[0].url ? (
+                                            <PaginationPrevious 
+                                                href={transactionsData.links[0].url} 
+                                                component={Link}
+                                            />
+                                        ) : (
+                                            <PaginationPrevious className="pointer-events-none opacity-50" />
+                                        )}
+                                    </PaginationItem>
+                                    
+                                    {transactionsData.links.slice(1, -1).map((link: any, i: number) => {
+                                        if (link.label === '...') {
+                                            return (
+                                                <PaginationItem key={i}>
+                                                    <PaginationEllipsis />
+                                                </PaginationItem>
+                                            );
+                                        }
+                                        return (
+                                            <PaginationItem key={i}>
+                                                <PaginationLink 
+                                                    href={link.url} 
+                                                    isActive={link.active}
+                                                    component={Link}
+                                                >
+                                                    {link.label}
+                                                </PaginationLink>
+                                            </PaginationItem>
+                                        );
+                                    })}
+
+                                    <PaginationItem>
+                                        {transactionsData.links[transactionsData.links.length - 1].url ? (
+                                            <PaginationNext 
+                                                href={transactionsData.links[transactionsData.links.length - 1].url} 
+                                                component={Link}
+                                            />
+                                        ) : (
+                                            <PaginationNext className="pointer-events-none opacity-50" />
+                                        )}
+                                    </PaginationItem>
+                                </PaginationContent>
+                            </Pagination>
+                            <div className="text-center mt-2 text-xs text-muted-foreground">
+                                Menampilkan {transactionsData.from} - {transactionsData.to} dari {transactionsData.total} transaksi
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </div>
         </>
