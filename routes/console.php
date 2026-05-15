@@ -9,5 +9,11 @@ Artisan::command('inspire', function () {
 
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('ai:generate-briefings')->dailyAt('08:00');
-Schedule::command('inventory:check-expiry')->everyMinute();
+Schedule::command('ai:generate-briefings')
+    ->dailyAt('08:00')
+    ->timezone('Asia/Jakarta')
+    ->withoutOverlapping();
+
+Schedule::command('inventory:check-expiry')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();
