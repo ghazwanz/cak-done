@@ -3,6 +3,7 @@
 namespace App\Services\Ai;
 
 use App\Contracts\AiProvider;
+use Google\Auth\Credentials\ServiceAccountCredentials;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -10,10 +11,10 @@ class VertexAiProvider implements AiProvider
 {
     public function __construct(
         protected string $projectId,
-        protected string $bearerToken,
         protected string $location,
         protected string $model,
-        protected string $apiEndpoint
+        protected string $apiEndpoint,
+        protected string $credentialsPath
     ) {}
 
     public function parseTransaction(?string $text = null, ?string $audioPath = null, ?string $imagePath = null): array
@@ -85,7 +86,20 @@ class VertexAiProvider implements AiProvider
 
     protected function getAccessToken(): string
     {
-        return $this->bearerToken;
+        try {
+            $auth = new ServiceAccountCredentials(
+                'https://www.googleapis.com/auth/cloud-platform',
+                $this->credentialsPath
+            );
+
+            return $auth->fetchAuthToken()['access_token'];
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch Vertex AI access token', [
+                'error' => $e->getMessage(),
+                'path' => $this->credentialsPath,
+            ]);
+            throw new \Exception('Vertex AI authentication failed: '.$e->getMessage());
+        }
     }
 
     protected function getSystemPrompt(): string

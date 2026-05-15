@@ -12,7 +12,7 @@ class AiManager extends Manager
     public function getDefaultDriver(): string
     {
         // Prioritize Vertex if configured
-        if (! empty($this->config->get('ai.providers.vertex.bearer_token')) && ! empty($this->config->get('ai.providers.vertex.project_id'))) {
+        if (! empty($this->config->get('ai.providers.vertex.project_id')) && ! empty($this->config->get('ai.providers.vertex.credentials_path'))) {
             return 'vertex';
         }
 
@@ -47,10 +47,10 @@ class AiManager extends Manager
 
         return new VertexAiProvider(
             projectId: $config['project_id'],
-            bearerToken: $config['bearer_token'] ?? '',
             location: $config['location'],
             model: $config['model'],
-            apiEndpoint: $config['api_endpoint']
+            apiEndpoint: $config['api_endpoint'],
+            credentialsPath: $config['credentials_path']
         );
     }
 }

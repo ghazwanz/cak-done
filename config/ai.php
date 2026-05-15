@@ -17,11 +17,11 @@ return [
     'providers' => [
 
         'vertex' => [
-            'project_id' => env('VERTEX_PROJECT_ID'),
-            'bearer_token' => env('VERTEX_BEARER_TOKEN'),
-            'location' => env('VERTEX_LOCATION', 'us-central1'),
+            'project_id' => env('GOOGLE_CLOUD_PROJECT_ID'),
+            'location' => env('GOOGLE_CLOUD_LOCATION', 'us-central1'),
             'model' => env('VERTEX_MODEL', 'gemini-2.5-flash'),
-            'api_endpoint' => env('VERTEX_API_ENDPOINT', 'https://us-central1-aiplatform.googleapis.com'),
+            'credentials_path' => env('GOOGLE_APPLICATION_CREDENTIALS', storage_path('app/google-cloud-key.json')),
+            'api_endpoint' => 'https://'.env('GOOGLE_CLOUD_LOCATION', 'us-central1').'-aiplatform.googleapis.com',
         ],
 
         'gemini' => [
