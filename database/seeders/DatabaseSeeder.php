@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
         $team = $owner->personalTeam();
         $team->update([
             'name' => 'Warung SWK Pak Budi',
-            'opening_balance' => 5000000, // Modal awal 5 Juta
+            'opening_balance' => 50000000, // Modal awal 50 Juta
         ]);
 
         // 3. Generate Historical Data for 3 Years (36 months)
@@ -59,6 +59,7 @@ class DatabaseSeeder extends Seeder
                 'name' => $name,
                 'category' => $category,
                 'unit' => in_array($category, ['Frozen Food', 'Makanan Kemasan']) ? 'pack' : (in_array($category, ['Bumbu']) ? 'gram' : 'pcs'),
+                'storage_type' => $category === 'Frozen Food' ? 'freezer' : 'suhu ruang',
             ]);
         }
 

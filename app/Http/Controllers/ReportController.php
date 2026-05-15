@@ -36,37 +36,40 @@ class ReportController extends Controller
 
         $netOperatingCash = $operatingIncome - $operatingExpense;
 
-        // Calculate starting balance (all transactions before start date)
-        $pastIncome = $team->transactions()
+        // Calculate starting balance (opening balance + all transactions before start date)
+        $pastIncome = (float) $team->transactions()
             ->business()
             ->income()
             ->where('created_at', '<', $startDate)
             ->sum('amount');
 
-        $pastExpense = $team->transactions()
+        $pastExpense = (float) $team->transactions()
             ->business()
             ->expense()
             ->where('created_at', '<', $startDate)
             ->sum('amount');
 
-        $startingBalance = $pastIncome - $pastExpense;
+        $startingBalance = (float) ($team->opening_balance ?? 0) + $pastIncome - $pastExpense;
 
         $data = [
             'startDate' => $startDate->toDateString(),
             'endDate' => $endDate->toDateString(),
-            'operatingIncome' => (int) $operatingIncome,
-            'operatingExpense' => (int) $operatingExpense,
-            'netOperatingCash' => (int) $netOperatingCash,
-            'startingBalance' => (int) $startingBalance,
-            'endingBalance' => (int) ($startingBalance + $netOperatingCash),
+            'operatingIncome' => (float) $operatingIncome,
+            'operatingExpense' => (float) $operatingExpense,
+            'netOperatingCash' => (float) $netOperatingCash,
+            'startingBalance' => (float) $startingBalance,
+            'endingBalance' => (float) ($startingBalance + $netOperatingCash),
+            'team' => $team,
         ];
 
         if ($request->has('pdf')) {
-            $pdf = Pdf::loadView('reports.cashflow', array_merge($data, [
-                'team' => $team,
+            // Ensure dates are objects for the PDF view
+            $pdfData = array_merge($data, [
                 'startDate' => $startDate,
                 'endDate' => $endDate,
-            ]));
+            ]);
+            
+            $pdf = Pdf::loadView('reports.cashflow', $pdfData);
 
             return $pdf->download('Laporan_Arus_Kas_'.$team->slug.'.pdf');
         }

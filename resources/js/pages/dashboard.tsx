@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { dashboard } from '@/routes';
 import inventory from '@/routes/inventory';
 import transactions from '@/routes/transactions';
+import * as reports from '@/routes/reports';
+import type { BreadcrumbItem, Transaction as TransactionType, CashFlowData } from '@/types';
 
 interface CashFlowData {
     date: string;
@@ -181,8 +183,13 @@ return;
                                 <div className="text-3xl font-extrabold text-foreground mb-1">
                                     Rp {(view === 'business' ? businessBalance : personalBalance).toLocaleString('id-ID')}
                                 </div>
-                                {view === 'business' && (
-                                    <a href={`/${teamSlug}/reports/cashflow`} target="_blank" className="text-sm text-primary font-bold hover:underline flex items-center gap-1 mt-2">
+                                {view === 'business' && teamSlug && (
+                                    <a 
+                                        href={reports.cashflow.url(teamSlug, { query: { pdf: 1 } })} 
+                                        target="_blank" 
+                                        rel="noreferrer"
+                                        className="text-sm text-primary font-bold hover:underline flex items-center gap-1 mt-2"
+                                    >
                                         <FileText className="h-3 w-3" /> Cetak Laporan (IAI)
                                     </a>
                                 )}

@@ -64,7 +64,17 @@ return 'Rp ...';
                         variant="outline" 
                         className="rounded-xl border-primary/20 hover:bg-primary/5 text-primary"
                     >
-                        <a href={reports.cashflow.url(currentTeam.slug, { pdf: 1 })} target="_blank" rel="noreferrer">
+                        <a 
+                            href={reports.cashflow.url(currentTeam.slug, { 
+                                query: {
+                                    pdf: 1,
+                                    start_date: startDate,
+                                    end_date: endDate
+                                }
+                            })} 
+                            target="_blank" 
+                            rel="noreferrer"
+                        >
                             <FileDown className="mr-2 h-4 w-4" /> Cetak PDF (IAI)
                         </a>
                     </Button>

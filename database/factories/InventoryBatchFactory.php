@@ -13,9 +13,13 @@ class InventoryBatchFactory extends Factory
         return [
             'team_id' => Team::factory(),
             'inventory_item_id' => InventoryItem::factory(),
-            'item_name' => $this->faker->word(),
+            'item_name' => function (array $attributes) {
+                return InventoryItem::find($attributes['inventory_item_id'])->name;
+            },
             'qty' => $this->faker->numberBetween(1, 100),
-            'unit' => $this->faker->randomElement(['pcs', 'kg', 'gram', 'liter', 'ml', 'pack', 'box', 'ikat', 'lusin']),
+            'unit' => function (array $attributes) {
+                return InventoryItem::find($attributes['inventory_item_id'])->unit;
+            },
             'cogs' => $this->faker->numberBetween(1000, 500000),
             'expiry_date' => $this->faker->dateTimeBetween('-1 month', '+1 year')->format('Y-m-d'),
         ];

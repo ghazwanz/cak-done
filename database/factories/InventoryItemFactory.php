@@ -33,6 +33,7 @@ class InventoryItemFactory extends Factory
             'name' => $name,
             'category' => $category,
             'unit' => $category === 'Frozen Food' ? 'pack' : ($category === 'Bumbu' ? 'gram' : 'pcs'),
+            'storage_type' => $category === 'Frozen Food' ? 'freezer' : 'suhu ruang',
             'low_stock_threshold' => $this->faker->numberBetween(10, 30),
         ];
     }

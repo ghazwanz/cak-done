@@ -6,6 +6,7 @@ use App\Models\InventoryItem;
 use App\Models\Team;
 use App\Models\Transaction;
 use App\Notifications\LowStockAlertNotification;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
