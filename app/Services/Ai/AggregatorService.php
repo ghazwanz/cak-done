@@ -189,12 +189,12 @@ class AggregatorService
             '01-01' => ['name' => 'Tahun Baru Masehi', 'is_hijri' => false, 'keywords' => ['tahun baru', 'masehi', 'new year']],
             '03-31' => ['name' => 'Idul Fitri (2026)', 'is_hijri' => true, 'keywords' => ['lebaran', 'idul fitri', 'ied', 'mudik']],
             '05-01' => ['name' => 'Hari Buruh', 'is_hijri' => false, 'keywords' => ['buruh', 'may day']],
-            '06-16' => ['name' => 'Idul Adha (2026)', 'is_hijri' => true, 'keywords' => ['idul adha', 'kurban', 'qurban', 'haji']],
+            '05-27' => ['name' => 'Idul Adha (2026)', 'is_hijri' => true, 'keywords' => ['idul adha', 'kurban', 'qurban', 'haji']],
             '08-17' => ['name' => 'Hari Kemerdekaan RI', 'is_hijri' => false, 'keywords' => ['kemerdekaan', 'agustusan', '17 agustus']],
             '10-28' => ['name' => 'Sumpah Pemuda', 'is_hijri' => false, 'keywords' => ['sumpah pemuda']],
             '12-25' => ['name' => 'Hari Raya Natal', 'is_hijri' => false, 'keywords' => ['natal', 'christmas']],
             '03-09' => ['name' => 'Idul Fitri (2027)', 'is_hijri' => true, 'keywords' => ['lebaran', 'idul fitri', 'ied', 'mudik']],
-            '05-16' => ['name' => 'Idul Adha (2027)', 'is_hijri' => true, 'keywords' => ['idul adha', 'kurban', 'qurban', 'haji']],
+            '06-08' => ['name' => 'Idul Adha (2027)', 'is_hijri' => true, 'keywords' => ['idul adha', 'kurban', 'qurban', 'haji']],
         ];
 
         $upcomingHoliday = null;
@@ -474,7 +474,7 @@ class AggregatorService
     {
         $holidays = [
             ['date' => '2026-06-01', 'name' => 'Hari Lahir Pancasila', 'advice' => 'Libur nasional, potensi pelanggan lokal meningkat.'],
-            ['date' => '2026-06-16', 'name' => 'Hari Raya Idul Adha', 'advice' => 'Siapkan stok daging dan bumbu dapur, biasanya pesanan melonjak!'],
+            ['date' => '2026-06-27', 'name' => 'Hari Raya Idul Adha', 'advice' => 'Siapkan stok daging dan bumbu dapur, biasanya pesanan melonjak!'],
             ['date' => '2026-08-17', 'name' => 'Hari Kemerdekaan RI', 'advice' => 'Banyak event & lomba, pesanan nasi kotak/snack biasanya ramai.'],
             ['date' => '2026-12-25', 'name' => 'Hari Raya Natal', 'advice' => 'Musim liburan, pastikan stok bahan baku aman untuk akhir tahun.'],
             ['date' => '2027-03-09', 'name' => 'Hari Raya Idul Fitri', 'advice' => 'Puncak belanja tahunan! Pastikan stok melimpah dan cashflow terjaga.'],
