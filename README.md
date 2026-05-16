@@ -15,15 +15,12 @@ CAK-DONE adalah sistem manajemen inventaris dan Point of Sale (POS) mutakhir yan
 
 ---
 
-
+## 📸 Link Deployment Aplikasi
+### [Deployment Aplikasi](https://cak-done-main-r0pgr1.laravel.cloud)
 
 ## 📸 Demo Aplikasi
 > *(Berikut adalah cuplikan antarmuka sistem CAK-DONE. Anda dapat mengganti placeholder
- di bawah ini dengan screenshot atau animasi GIF dari sistem aslinya)*
-
-
-
-> *(Berikut adalah cuplikan antarmuka sistem CAK-DONE. Anda dapat mengganti placeholder di bawah ini dengan screenshot atau animasi GIF dari sistem aslinya)*
+ di bawah ini dengan screenshot dari sistem aslinya)*
 
 ### 1. Landing Page CAK DONE
 ![landing Page](report/img/Landingpage.png)
