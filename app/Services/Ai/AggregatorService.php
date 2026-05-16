@@ -10,6 +10,106 @@ use Illuminate\Support\Facades\DB;
 class AggregatorService
 {
     /**
+     * Centralized holiday database for consistent date resolution.
+     */
+    private function getHolidayDatabase(): array
+    {
+        return [
+            'Idul Fitri' => [
+                '2024' => '2024-04-10',
+                '2025' => '2025-03-31',
+                '2026' => '2026-03-20',
+                '2027' => '2027-03-09',
+                'keywords' => ['lebaran', 'idul fitri', 'ied', 'mudik'],
+                'advice' => 'Puncak belanja tahunan! Pastikan stok melimpah dan cashflow terjaga.',
+            ],
+            'Idul Adha' => [
+                '2024' => '2024-06-17',
+                '2025' => '2025-06-07',
+                '2026' => '2026-05-27',
+                '2027' => '2027-06-08',
+                'keywords' => ['idul adha', 'kurban', 'qurban', 'haji'],
+                'advice' => 'Siapkan stok daging dan bumbu dapur, biasanya pesanan melonjak!',
+            ],
+            'Tahun Baru' => [
+                'pattern' => '-01-01',
+                'keywords' => ['tahun baru', 'new year', 'masehi'],
+                'advice' => 'Awal tahun, potensi peningkatan belanja rumah tangga.',
+            ],
+            '17 Agustus' => [
+                'pattern' => '-08-17',
+                'keywords' => ['kemerdekaan', 'agustusan', '17 agustus'],
+                'advice' => 'Banyak event & lomba, pesanan nasi kotak/snack biasanya ramai.',
+            ],
+            'Hari Lahir Pancasila' => [
+                'pattern' => '-06-01',
+                'keywords' => ['pancasila', 'lahir pancasila'],
+                'advice' => 'Libur nasional, potensi pelanggan lokal meningkat.',
+            ],
+            'Natal' => [
+                'pattern' => '-12-25',
+                'keywords' => ['natal', 'christmas'],
+                'advice' => 'Musim liburan, pastikan stok bahan baku aman untuk akhir tahun.',
+            ],
+        ];
+    }
+
+    /**
+     * Resolve a holiday name and year into a specific date range for analysis.
+     * Usually 7 days before to 2 days after the holiday.
+     */
+    public function resolveHolidayRange(string $query): ?array
+    {
+        $lowerQuery = strtolower($query);
+        $year = null;
+
+        // Detect Year
+        if (str_contains($lowerQuery, 'tahun lalu') || str_contains($lowerQuery, 'tahun wingi') || str_contains($lowerQuery, 'wingi')) {
+            $year = now()->year - 1;
+        } elseif (preg_match('/\b(20\d{2})\b/', $query, $matches)) {
+            $year = (int) $matches[1];
+        }
+
+        // Holiday Mappings
+        $holidays = $this->getHolidayDatabase();
+
+        foreach ($holidays as $name => $config) {
+            foreach ($config['keywords'] as $keyword) {
+                if (str_contains($lowerQuery, $keyword)) {
+                    // If no year specified, decide between this year and last year
+                    if ($year === null) {
+                        $thisYearStr = $config[now()->year] ?? (now()->year.($config['pattern'] ?? ''));
+                        $thisYearDate = Carbon::parse($thisYearStr);
+
+                        // If it's more than 3 days in the future, and we are asking for history/stats, use last year
+                        if ($thisYearDate->isFuture() && $thisYearDate->diffInDays(now()) > 3) {
+                            $year = now()->year - 1;
+                        } else {
+                            $year = now()->year;
+                        }
+                    }
+
+                    $dateStr = $config[$year] ?? ($year.($config['pattern'] ?? ''));
+
+                    if (! str_contains($dateStr, '-')) {
+                        continue;
+                    }
+
+                    $holidayDate = Carbon::parse($dateStr);
+
+                    return [
+                        'start' => $holidayDate->copy()->subDays(7)->toDateString(),
+                        'end' => $holidayDate->copy()->addDays(2)->toDateString(),
+                        'label' => "$name $year",
+                    ];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Find the closest matching inventory item to prevent redundancy due to typos.
      */
     public function findClosestInventoryItem(Team $team, ?string $itemName): ?InventoryItem
@@ -83,16 +183,19 @@ class AggregatorService
 
         $currentIncome = (float) $team->transactions()
             ->where('type', 'income')
+            ->where('is_business', true)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->sum('amount');
 
         $currentExpense = (float) $team->transactions()
             ->where('type', 'expense')
+            ->where('is_business', true)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->sum('amount');
 
         $prevIncome = (float) $team->transactions()
             ->where('type', 'income')
+            ->where('is_business', true)
             ->whereBetween('created_at', [$prevStart, $prevEnd])
             ->sum('amount');
 
@@ -123,6 +226,7 @@ class AggregatorService
                 'net_margin_percent' => round($margin, 2),
                 'cash_on_hand' => $cashOnHand,
                 'transaction_count' => $team->transactions()
+                    ->where('is_business', true)
                     ->whereBetween('created_at', [$startDate, $endDate])
                     ->count(),
             ],
@@ -185,35 +289,25 @@ class AggregatorService
      */
     public function getUpcomingHolidayPredictions(Team $team, ?string $query = null): ?array
     {
-        $holidays = [
-            '01-01' => ['name' => 'Tahun Baru Masehi', 'is_hijri' => false, 'keywords' => ['tahun baru', 'masehi', 'new year']],
-            '03-31' => ['name' => 'Idul Fitri (2026)', 'is_hijri' => true, 'keywords' => ['lebaran', 'idul fitri', 'ied', 'mudik']],
-            '05-01' => ['name' => 'Hari Buruh', 'is_hijri' => false, 'keywords' => ['buruh', 'may day']],
-            '05-27' => ['name' => 'Idul Adha (2026)', 'is_hijri' => true, 'keywords' => ['idul adha', 'kurban', 'qurban', 'haji']],
-            '08-17' => ['name' => 'Hari Kemerdekaan RI', 'is_hijri' => false, 'keywords' => ['kemerdekaan', 'agustusan', '17 agustus']],
-            '10-28' => ['name' => 'Sumpah Pemuda', 'is_hijri' => false, 'keywords' => ['sumpah pemuda']],
-            '12-25' => ['name' => 'Hari Raya Natal', 'is_hijri' => false, 'keywords' => ['natal', 'christmas']],
-            '03-09' => ['name' => 'Idul Fitri (2027)', 'is_hijri' => true, 'keywords' => ['lebaran', 'idul fitri', 'ied', 'mudik']],
-            '06-08' => ['name' => 'Idul Adha (2027)', 'is_hijri' => true, 'keywords' => ['idul adha', 'kurban', 'qurban', 'haji']],
-        ];
+        $holidays = $this->getHolidayDatabase();
 
         $upcomingHoliday = null;
         $holidayDate = null;
-        $isHijri = false;
         $today = now();
 
         // 1. Try to find a holiday mentioned in the query
         if ($query) {
             $lowerQuery = strtolower($query);
-            foreach ($holidays as $dateKey => $data) {
-                foreach ($data['keywords'] as $keyword) {
+            foreach ($holidays as $name => $config) {
+                foreach ($config['keywords'] as $keyword) {
                     if (str_contains($lowerQuery, $keyword)) {
-                        $upcomingHoliday = $data['name'];
-                        $isHijri = $data['is_hijri'];
-                        // Set holiday date to this year's occurrence
-                        $holidayDate = Carbon::createFromFormat('m-d', $dateKey)->setYear($today->year);
-                        if ($holidayDate->isPast() && ! str_contains($dateKey, '12-25')) {
-                            $holidayDate->addYear();
+                        $upcomingHoliday = $name;
+                        $dateStr = $config[$today->year] ?? ($today->year.($config['pattern'] ?? ''));
+                        if (str_contains($dateStr, '-')) {
+                            $holidayDate = Carbon::parse($dateStr);
+                            if ($holidayDate->isPast() && ! str_contains($dateStr, '12-25')) {
+                                $holidayDate = Carbon::parse($config[$today->year + 1] ?? (($today->year + 1).($config['pattern'] ?? '')));
+                            }
                         }
                         break 2;
                     }
@@ -221,17 +315,25 @@ class AggregatorService
             }
         }
 
-        // 2. If no specific holiday found, find the next upcoming one (no 30-day limit)
+        // 2. If no specific holiday found, find the next upcoming one
         if (! $upcomingHoliday) {
-            for ($i = 1; $i <= 366; $i++) {
-                $checkDate = $today->copy()->addDays($i);
-                $md = $checkDate->format('m-d');
-                if (isset($holidays[$md])) {
-                    $upcomingHoliday = $holidays[$md]['name'];
-                    $isHijri = $holidays[$md]['is_hijri'];
-                    $holidayDate = $checkDate;
-                    break;
+            $nextDates = [];
+            foreach ($holidays as $name => $config) {
+                $dateStr = $config[$today->year] ?? ($today->year.($config['pattern'] ?? ''));
+                if (str_contains($dateStr, '-')) {
+                    $d = Carbon::parse($dateStr);
+                    if ($d->isFuture()) {
+                        $nextDates[] = ['name' => $name, 'date' => $d];
+                    } else {
+                        $nextYearDateStr = $config[$today->year + 1] ?? (($today->year + 1).($config['pattern'] ?? ''));
+                        $nextDates[] = ['name' => $name, 'date' => Carbon::parse($nextYearDateStr)];
+                    }
                 }
+            }
+            usort($nextDates, fn ($a, $b) => $a['date']->timestamp <=> $b['date']->timestamp);
+            if (! empty($nextDates)) {
+                $upcomingHoliday = $nextDates[0]['name'];
+                $holidayDate = $nextDates[0]['date'];
             }
         }
 
@@ -239,6 +341,8 @@ class AggregatorService
             return null;
         }
 
+        // Determine if it was Hijri to use the 11-day shift for historical comparison
+        $isHijri = in_array($upcomingHoliday, ['Idul Fitri', 'Idul Adha']);
         $lastYearHoliday = $isHijri ? $holidayDate->copy()->subYear()->addDays(11) : $holidayDate->copy()->subYear();
         $startHist = $lastYearHoliday->copy()->subDays(7);
         $endHist = $lastYearHoliday->copy()->addDays(2);
@@ -248,6 +352,7 @@ class AggregatorService
             FROM transactions
             WHERE team_id = ? 
               AND type = 'income' 
+              AND is_business = true
               AND created_at BETWEEN ? AND ?
             GROUP BY item_name
             ORDER BY qty_sold DESC
@@ -265,11 +370,13 @@ class AggregatorService
 
         $recent30DaysIncome = $team->transactions()
             ->where('type', 'income')
+            ->where('is_business', true)
             ->whereBetween('created_at', [now()->subDays(30), now()])
             ->sum('amount');
 
         $lastYear30DaysIncome = $team->transactions()
             ->where('type', 'income')
+            ->where('is_business', true)
             ->whereBetween('created_at', [now()->subYear()->subDays(30), now()->subYear()])
             ->sum('amount');
 
@@ -470,25 +577,57 @@ class AggregatorService
     /**
      * Get proactive alerts for upcoming national holidays.
      */
-    public function getUpcomingHolidayAlerts(): array
+    public function getUpcomingHolidayAlerts(Team $team): array
     {
-        $holidays = [
-            ['date' => '2026-06-01', 'name' => 'Hari Lahir Pancasila', 'advice' => 'Libur nasional, potensi pelanggan lokal meningkat.'],
-            ['date' => '2026-06-27', 'name' => 'Hari Raya Idul Adha', 'advice' => 'Siapkan stok daging dan bumbu dapur, biasanya pesanan melonjak!'],
-            ['date' => '2026-08-17', 'name' => 'Hari Kemerdekaan RI', 'advice' => 'Banyak event & lomba, pesanan nasi kotak/snack biasanya ramai.'],
-            ['date' => '2026-12-25', 'name' => 'Hari Raya Natal', 'advice' => 'Musim liburan, pastikan stok bahan baku aman untuk akhir tahun.'],
-            ['date' => '2027-03-09', 'name' => 'Hari Raya Idul Fitri', 'advice' => 'Puncak belanja tahunan! Pastikan stok melimpah dan cashflow terjaga.'],
-        ];
-
+        $holidays = $this->getHolidayDatabase();
         $alerts = [];
-        foreach ($holidays as $h) {
-            $daysTo = ceil(now()->diffInDays(Carbon::parse($h['date']), false));
-            if ($daysTo >= 0 && $daysTo <= 10) {
+        $today = now();
+
+        foreach ($holidays as $name => $config) {
+            $dateStr = $config[$today->year] ?? ($today->year.($config['pattern'] ?? ''));
+            if (! str_contains($dateStr, '-')) {
+                continue;
+            }
+
+            $holidayDate = Carbon::parse($dateStr);
+            if ($holidayDate->isPast() && ! str_contains($dateStr, '12-25')) {
+                $holidayDate = Carbon::parse($config[$today->year + 1] ?? (($today->year + 1).($config['pattern'] ?? '')));
+            }
+
+            $daysTo = ceil($today->diffInDays($holidayDate, false));
+
+            // Show alert if holiday is in the next 15 days
+            if ($daysTo >= 0 && $daysTo <= 15) {
+                // FETCH DATA ASLI TOKO UNTUK SARAN NON-HALU
+                $isHijri = in_array($name, ['Idul Fitri', 'Idul Adha']);
+                $lastYearHoliday = $isHijri ? $holidayDate->copy()->subYear()->addDays(11) : $holidayDate->copy()->subYear();
+                $startHist = $lastYearHoliday->copy()->subDays(7)->toDateTimeString();
+                $endHist = $lastYearHoliday->copy()->addDays(2)->toDateTimeString();
+
+                $topItems = DB::table('transactions')
+                    ->where('team_id', $team->id)
+                    ->where('type', 'income')
+                    ->where('is_business', true)
+                    ->whereBetween('created_at', [$startHist, $endHist])
+                    ->select('item_name', DB::raw('COUNT(*) as qty'))
+                    ->groupBy('item_name')
+                    ->orderByDesc('qty')
+                    ->limit(2)
+                    ->get();
+
+                $dataAdvice = '';
+                if ($topItems->isNotEmpty()) {
+                    $itemsStr = $topItems->map(fn ($i) => "{$i->item_name} ({$i->qty}x)")->implode(', ');
+                    $dataAdvice = "Berdasarkan data tahun lalu, barang paling laku pas momen ini adalah {$itemsStr}. Siapkan stok lebih banyak rek!";
+                } else {
+                    $dataAdvice = $config['advice'] ?? '';
+                }
+
                 $alerts[] = [
-                    'name' => $h['name'],
+                    'name' => $name,
                     'days_to' => $daysTo,
-                    'advice' => $h['advice'],
-                    'message' => "H-{$daysTo} {$h['name']}: {$h['advice']}",
+                    'advice' => $dataAdvice,
+                    'message' => "H-{$daysTo} {$name}: {$dataAdvice}",
                 ];
             }
         }
@@ -600,6 +739,7 @@ class AggregatorService
         $dayOfWeekRaw = $isSqlite ? "strftime('%w', created_at)" : 'extract(dow from created_at)';
 
         $data = $team->transactions()
+            ->where('is_business', true)
             ->where('created_at', '>=', now()->subDays(28))
             ->select(
                 DB::raw("$dayOfWeekRaw as dow"),

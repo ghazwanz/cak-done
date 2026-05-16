@@ -35,7 +35,7 @@ class DashboardController extends Controller
         );
 
         $proactiveAlerts = array_merge(
-            $aggregator->getUpcomingHolidayAlerts(),
+            $aggregator->getUpcomingHolidayAlerts($team),
             $aggregator->getWeeklyPatternInsights($team)
         );
 

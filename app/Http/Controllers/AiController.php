@@ -220,7 +220,7 @@ class AiController extends Controller
             }
 
             // 4. Holiday Predictions
-            $holidayPrediction = $this->aggregator->getUpcomingHolidayAlerts();
+            $holidayPrediction = $this->aggregator->getUpcomingHolidayAlerts($team);
             foreach ($holidayPrediction as $holiday) {
                 if ($itemName && str_contains(strtolower($itemName), strtolower($holiday['name']))) {
                     $contextualAdvice[] = 'ℹ️ **Event**: '.$holiday['message'];
@@ -282,8 +282,14 @@ class AiController extends Controller
 
         $lowerText = strtolower($text);
 
+        // Check for specific Holiday queries (Workflow: Holiday Insights)
+        $holidayRange = $this->aggregator->resolveHolidayRange($text);
+        if ($holidayRange) {
+            $startDate = $holidayRange['start'];
+            $endDate = $holidayRange['end'];
+        }
         // Yearly context
-        if (str_contains($lowerText, 'setahun') || str_contains($lowerText, 'tahun ini')) {
+        elseif (str_contains($lowerText, 'setahun') || str_contains($lowerText, 'tahun ini')) {
             $startDate = now()->startOfYear()->toDateString();
             $endDate = now()->toDateString();
         } elseif (str_contains($lowerText, 'tahun lalu') || str_contains($lowerText, 'tahun wingi')) {
@@ -298,6 +304,23 @@ class AiController extends Controller
         // Weekly context
         elseif (str_contains($lowerText, 'minggu ini') || str_contains($lowerText, 'pekan ini')) {
             $startDate = now()->startOfWeek()->toDateString();
+            $endDate = now()->toDateString();
+        }
+        // Last X Months/Days/Weeks detection
+        elseif (preg_match('/(\d+|se|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh)\s+(bulan|sasi|minggu|pekan|hari|dino)\s+terakhir/i', $lowerText, $matches)) {
+            $value = $matches[1];
+            // Simple word-to-number mapping for common cases
+            $map = ['se' => 1, 'satu' => 1, 'dua' => 2, 'tiga' => 3, 'empat' => 4, 'lima' => 5, 'enam' => 6, 'tujuh' => 7, 'delapan' => 8, 'sembilan' => 9, 'sepuluh' => 10];
+            $count = is_numeric($value) ? (int) $value : ($map[strtolower($value)] ?? 1);
+
+            $unit = strtolower($matches[2]);
+            if (in_array($unit, ['bulan', 'sasi'])) {
+                $startDate = now()->subMonths($count)->startOfMonth()->toDateString();
+            } elseif (in_array($unit, ['minggu', 'pekan'])) {
+                $startDate = now()->subWeeks($count)->startOfWeek()->toDateString();
+            } else { // hari / dino
+                $startDate = now()->subDays($count)->toDateString();
+            }
             $endDate = now()->toDateString();
         }
 
